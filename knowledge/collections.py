@@ -1,12 +1,16 @@
 """
 knowledge/collections.py
 Qdrant collection definitions and management.
+
+Uses a process-wide singleton QdrantClient to avoid concurrent-access
+lock errors when the local file-based backend is in use.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import threading
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -59,13 +63,34 @@ COLLECTIONS: dict[str, CollectionDef] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Singleton Qdrant client — one per qdrant_path
+# ---------------------------------------------------------------------------
+_client_lock = threading.Lock()
+_shared_clients: dict[str, object] = {}
+
+
+def get_shared_client(qdrant_path: str = QDRANT_PATH):
+    """Return (or create) the process-wide singleton QdrantClient for *qdrant_path*.
+
+    Using a single client prevents the "Storage folder is already accessed by
+    another instance of Qdrant client" error that occurs when multiple
+    QdrantClient instances open the same local path concurrently.
+    """
+    with _client_lock:
+        if qdrant_path not in _shared_clients:
+            from qdrant_client import QdrantClient
+            os.makedirs(qdrant_path, exist_ok=True)
+            _shared_clients[qdrant_path] = QdrantClient(path=qdrant_path)
+            logger.info("[Qdrant] Singleton client created for %s", qdrant_path)
+        return _shared_clients[qdrant_path]
+
+
 def ensure_collections(qdrant_path: str = QDRANT_PATH) -> dict[str, bool]:
     """Create all collections in Qdrant if they don't exist."""
-    from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams
 
-    os.makedirs(qdrant_path, exist_ok=True)
-    client = QdrantClient(path=qdrant_path)
+    client = get_shared_client(qdrant_path)
 
     existing = [c.name for c in client.get_collections().collections]
     results = {}
@@ -94,8 +119,7 @@ def ensure_collections(qdrant_path: str = QDRANT_PATH) -> dict[str, bool]:
 def get_collection_stats(qdrant_path: str = QDRANT_PATH) -> dict[str, dict]:
     """Get stats for all collections."""
     try:
-        from qdrant_client import QdrantClient
-        client = QdrantClient(path=qdrant_path)
+        client = get_shared_client(qdrant_path)
         stats = {}
         for name in COLLECTIONS:
             try:

@@ -28,16 +28,15 @@ def load_chunks_to_qdrant(
     if not chunks:
         return 0
 
-    from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, PointStruct, VectorParams
 
-    # Connect to Qdrant (local persistence)
+    # Connect to Qdrant (shared singleton — local persistence)
     if qdrant_path is None:
         qdrant_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "qdrant_data"
         )
-    os.makedirs(qdrant_path, exist_ok=True)
-    client = QdrantClient(path=qdrant_path)
+    from knowledge.collections import get_shared_client
+    client = get_shared_client(qdrant_path)
 
     # Load embedding model
     from sentence_transformers import SentenceTransformer

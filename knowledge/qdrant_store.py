@@ -41,9 +41,8 @@ class QdrantKnowledgeStore:
 
     def _get_client(self):
         if self._client is None:
-            from qdrant_client import QdrantClient
-            os.makedirs(self._qdrant_path, exist_ok=True)
-            self._client = QdrantClient(path=self._qdrant_path)
+            from knowledge.collections import get_shared_client
+            self._client = get_shared_client(self._qdrant_path)
         return self._client
 
     def _get_embed_model(self):
