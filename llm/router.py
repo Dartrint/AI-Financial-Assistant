@@ -12,11 +12,10 @@ import os
 from llm.base import LLMProvider, LLMResponse, _strip_think_blocks
 from llm.gemini_provider import GeminiProvider
 from llm.groq_provider import GroqProvider
-from llm.ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PRIORITY = os.getenv("LLM_PRIORITY", "ollama,groq,gemini")
+DEFAULT_PRIORITY = os.getenv("LLM_PRIORITY", "groq,gemini")
 
 
 class LLMRouter:
@@ -35,11 +34,6 @@ class LLMRouter:
 
     def _init_providers(self) -> None:
         """Initialize all available providers."""
-        try:
-            self._providers["ollama"] = OllamaProvider()
-        except Exception as e:
-            logger.warning(f"[Router] Ollama init failed: {e}")
-
         try:
             self._providers["groq"] = GroqProvider()
         except Exception as e:
