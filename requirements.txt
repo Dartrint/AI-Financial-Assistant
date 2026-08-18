@@ -1,0 +1,49 @@
+# Core
+fastapi>=0.115.0
+uvicorn>=0.30.0
+jinja2>=3.1.0
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+httpx>=0.27.0
+
+# Market Data
+vnstock>=4.0.0
+yfinance>=0.2.30
+duckdb>=1.0.0
+
+# LLM
+groq>=0.11.0
+ollama>=0.3.0
+google-generativeai>=0.5.0
+
+# Agent (LangGraph)
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+
+# RAG (LlamaIndex)
+llama-index-core>=0.11.0
+llama-index-vector-stores-qdrant>=0.3.0
+llama-index-embeddings-huggingface>=0.3.0
+
+# Vector DB
+qdrant-client>=1.11.0
+
+# Retrieval
+rank-bm25>=0.2.2
+sentence-transformers>=2.2.0
+
+# RAG quality / regression evaluation (optional judge credentials required)
+ragas>=0.2.0
+deepeval>=2.0.0
+datasets>=2.19.0
+
+# ETL
+trafilatura>=1.12.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0

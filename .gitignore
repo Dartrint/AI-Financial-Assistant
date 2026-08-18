@@ -1,0 +1,23 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv-1/
+
+# Data
+data/*.duckdb
+data_cache/*.csv
+qdrant_data/
+
+# IDE / Tools
+.vscode/
+.agents/
+.deepeval/
+
+# OS
+.DS_Store
+Thumbs.db
