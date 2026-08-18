@@ -10,7 +10,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from knowledge.qdrant_store import QdrantKnowledgeStore
 
@@ -121,7 +121,7 @@ class KnowledgeBase:
             except Exception as e:
                 logger.warning(f"[KnowledgeBase] Error loading {filename}: {e}")
 
-    def search(self, query: str, top_k: int = 5, collections: Optional[list[str]] = None) -> list:
+    def search(self, query: str, top_k: int = 5, collections: list[str] | None = None) -> list:
         """Search using Qdrant vector store."""
         return self._qdrant_store.search(query, collections=collections, top_k=top_k)
 

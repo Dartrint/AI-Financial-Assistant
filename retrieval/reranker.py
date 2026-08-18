@@ -36,7 +36,7 @@ class Reranker:
             logger.info(f"[Reranker] Loading {self._model_name}...")
             self._model = CrossEncoder(self._model_name, max_length=512)
             self._loaded = True
-            logger.info(f"[Reranker] Model loaded")
+            logger.info("[Reranker] Model loaded")
         except ImportError:
             logger.warning("[Reranker] sentence-transformers not installed")
         except Exception as e:

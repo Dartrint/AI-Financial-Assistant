@@ -8,9 +8,7 @@ from __future__ import annotations
 import re
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Optional
-
+from dataclasses import dataclass
 
 _THINK_BLOCK_RE = re.compile(r"<think>.*?(?:</think>|$)", re.DOTALL | re.IGNORECASE)
 
@@ -31,7 +29,7 @@ class LLMResponse:
     provider: str
     tokens_used: int = 0
     latency_ms: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class LLMProvider(ABC):

@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime
-from typing import Optional
 
 import pandas as pd
 
@@ -94,9 +93,9 @@ class DuckDBStore:
 
     def query(
         self,
-        tickers: Optional[list[str]] = None,
-        years: Optional[list[int]] = None,
-        metrics: Optional[list[str]] = None,
+        tickers: list[str] | None = None,
+        years: list[int] | None = None,
+        metrics: list[str] | None = None,
     ) -> pd.DataFrame:
         """Query market data with optional filters."""
         con = self._connect()

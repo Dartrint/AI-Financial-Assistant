@@ -14,7 +14,6 @@ import re
 import time
 import unicodedata
 from datetime import date, timedelta
-from typing import Optional
 
 import pandas as pd
 
@@ -53,7 +52,7 @@ def _strip_accents(text: str) -> str:
     return "".join(c for c in text if unicodedata.category(c) != "Mn")
 
 
-def _normalize_line_item(raw_name: str) -> Optional[str]:
+def _normalize_line_item(raw_name: str) -> str | None:
     key = _strip_accents(str(raw_name)).lower()
     for normalized, patterns in LINE_ITEM_PATTERNS.items():
         for p in patterns:
@@ -179,7 +178,7 @@ def _is_cache_fresh(path: str) -> bool:
     return age_hours < CACHE_TTL_HOURS
 
 
-def _load_cache(symbol: str, year: int) -> Optional[pd.DataFrame]:
+def _load_cache(symbol: str, year: int) -> pd.DataFrame | None:
     path = _cache_path(symbol, year)
     if _is_cache_fresh(path):
         try:

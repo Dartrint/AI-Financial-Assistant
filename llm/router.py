@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 from llm.base import LLMProvider, LLMResponse, _strip_think_blocks
-from llm.ollama_provider import OllamaProvider
-from llm.groq_provider import GroqProvider
 from llm.gemini_provider import GeminiProvider
+from llm.groq_provider import GroqProvider
+from llm.ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +27,11 @@ class LLMRouter:
     Supports task-based routing for optimal quality/speed tradeoffs.
     """
 
-    def __init__(self, priority: Optional[str] = None):
+    def __init__(self, priority: str | None = None):
         self._priority_order = (priority or DEFAULT_PRIORITY).split(",")
         self._providers: dict[str, LLMProvider] = {}
         self._init_providers()
-        self._active_provider: Optional[str] = None
+        self._active_provider: str | None = None
 
     def _init_providers(self) -> None:
         """Initialize all available providers."""
@@ -56,10 +55,10 @@ class LLMRouter:
         return self._providers
 
     @property
-    def active_provider(self) -> Optional[str]:
+    def active_provider(self) -> str | None:
         return self._active_provider
 
-    def get_provider(self, name: str) -> Optional[LLMProvider]:
+    def get_provider(self, name: str) -> LLMProvider | None:
         return self._providers.get(name)
 
     def generate(
@@ -68,7 +67,7 @@ class LLMRouter:
         system: str = "",
         temperature: float = 0.0,
         max_tokens: int = 1024,
-        preferred_provider: Optional[str] = None,
+        preferred_provider: str | None = None,
     ) -> LLMResponse:
         """
         Generate text using the highest-priority available provider.

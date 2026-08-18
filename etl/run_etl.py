@@ -64,11 +64,11 @@ def load_seed_data() -> dict[str, int]:
 
 async def run_web_etl(source_name: str, limit: int | None = None, dry_run: bool = False) -> dict:
     """Run full ETL pipeline for a web source."""
-    from etl.extract import extract_from_source
-    from etl.transform import transform_pages
     from etl.chunker import chunk_documents
+    from etl.extract import extract_from_source
     from etl.loader import load_chunks_to_qdrant
     from etl.state import changed_documents, load_state, record_documents
+    from etl.transform import transform_pages
 
     source = get_source(source_name)
     if source is None:

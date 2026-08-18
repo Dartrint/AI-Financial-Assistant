@@ -20,7 +20,6 @@ from typing import Any
 
 from agent import FinancialAgent
 
-
 ROOT = Path(__file__).resolve().parent
 DEFAULT_CASES = ROOT / "cases.jsonl"
 DEFAULT_OUTPUT = ROOT / "results"
@@ -82,11 +81,17 @@ def run_ragas(records: list[dict[str, Any]]) -> dict[str, Any]:
     try:
         from datasets import Dataset
         from ragas import evaluate
+
         # RAGAS >=0.4 collections API.  Pin the working LangChain/RAGAS
         # combination in a lock file before production use.
         from ragas.metrics.collections import (
-            AnswerRelevancy, ContextPrecision, ContextRecall, ContextRelevance,
-            Faithfulness, NoiseSensitivity, ResponseGroundedness,
+            AnswerRelevancy,
+            ContextPrecision,
+            ContextRecall,
+            ContextRelevance,
+            Faithfulness,
+            NoiseSensitivity,
+            ResponseGroundedness,
         )
     except Exception as exc:
         return {"status": "setup_error", "reason": f"RAGAS import/configuration error: {type(exc).__name__}: {exc}"}
@@ -114,7 +119,13 @@ def run_ragas(records: list[dict[str, Any]]) -> dict[str, Any]:
 def run_deepeval(records: list[dict[str, Any]]) -> dict[str, Any]:
     try:
         from deepeval import evaluate
-        from deepeval.metrics import AnswerRelevancyMetric, ContextualPrecisionMetric, ContextualRecallMetric, FaithfulnessMetric, HallucinationMetric
+        from deepeval.metrics import (
+            AnswerRelevancyMetric,
+            ContextualPrecisionMetric,
+            ContextualRecallMetric,
+            FaithfulnessMetric,
+            HallucinationMetric,
+        )
         from deepeval.test_case import LLMTestCase
     except ImportError as exc:
         return {"status": "skipped", "reason": f"Missing dependency: {exc}"}

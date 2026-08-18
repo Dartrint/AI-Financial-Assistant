@@ -10,7 +10,6 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class CleanedDocument:
             self.updated_at = datetime.now().isoformat()
 
 
-def extract_with_trafilatura(html: str, url: str) -> Optional[dict]:
+def extract_with_trafilatura(html: str, url: str) -> dict | None:
     """Extract main content using Trafilatura."""
     try:
         import trafilatura
@@ -66,7 +65,7 @@ def extract_with_trafilatura(html: str, url: str) -> Optional[dict]:
     return None
 
 
-def extract_with_bs4(html: str, url: str) -> Optional[dict]:
+def extract_with_bs4(html: str, url: str) -> dict | None:
     """Fallback: extract content using BeautifulSoup."""
     try:
         from bs4 import BeautifulSoup
@@ -114,8 +113,8 @@ def transform_page(
     html: str,
     url: str,
     category: str = "",
-    tags: Optional[list[str]] = None,
-) -> Optional[CleanedDocument]:
+    tags: list[str] | None = None,
+) -> CleanedDocument | None:
     """
     Transform raw HTML into a clean, structured document.
     Tries Trafilatura first, falls back to BeautifulSoup.
@@ -156,7 +155,7 @@ def transform_page(
 def transform_pages(
     pages: list,  # list[FetchedPage]
     category: str = "",
-    tags: Optional[list[str]] = None,
+    tags: list[str] | None = None,
 ) -> list[CleanedDocument]:
     """Transform multiple fetched pages."""
     docs = []

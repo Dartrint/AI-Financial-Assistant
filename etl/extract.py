@@ -11,7 +11,6 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from typing import Optional
 
 import httpx
 
@@ -36,7 +35,7 @@ class FetchedPage:
     content_type: str = ""
 
 
-async def discover_urls_from_sitemap(sitemap_url: str, pattern: Optional[str] = None) -> list[str]:
+async def discover_urls_from_sitemap(sitemap_url: str, pattern: str | None = None) -> list[str]:
     """Parse sitemap.xml to discover page URLs."""
     urls = []
     try:
@@ -70,7 +69,7 @@ async def discover_urls_from_sitemap(sitemap_url: str, pattern: Optional[str] = 
     return urls
 
 
-async def fetch_page(url: str, client: httpx.AsyncClient) -> Optional[FetchedPage]:
+async def fetch_page(url: str, client: httpx.AsyncClient) -> FetchedPage | None:
     """Fetch a single page with error handling."""
     try:
         resp = await client.get(url)
@@ -105,7 +104,7 @@ async def fetch_pages(
         timeout=DEFAULT_TIMEOUT,
         follow_redirects=True,
     ) as client:
-        async def fetch_with_limit(url: str) -> Optional[FetchedPage]:
+        async def fetch_with_limit(url: str) -> FetchedPage | None:
             async with semaphore:
                 result = await fetch_page(url, client)
                 await asyncio.sleep(delay_seconds)

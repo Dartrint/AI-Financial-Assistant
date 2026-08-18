@@ -7,7 +7,6 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-
 DEFAULT_STATE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "etl_state.json")
 
 

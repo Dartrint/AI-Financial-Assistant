@@ -1,0 +1,268 @@
+{
+  "created_at": "2026-08-18T14:35:03.886008+00:00",
+  "engine": "deepeval",
+  "core": {
+    "routing_accuracy": 0.9,
+    "answer_nonempty_rate": 1.0,
+    "citation_or_reference_coverage": 0.7,
+    "retrieval_hit_at_5": 1.0
+  },
+  "records": [
+    {
+      "case": {
+        "id": "concept_roe",
+        "question": "ROE là gì và công thức tính như thế nào?",
+        "expected_intent": "concept_explain",
+        "expected_titles": [
+          "ROE"
+        ],
+        "reference_answer": "ROE là tỷ suất lợi nhuận trên vốn chủ sở hữu; thường được tính bằng lợi nhuận sau thuế chia vốn chủ sở hữu bình quân."
+      },
+      "question": "ROE là gì và công thức tính như thế nào?",
+      "answer": "**Ủy ban Chứng khoán Nhà nước (SSC)**\nCơ quan quản lý thị trường chứng khoán Việt Nam, trực thuộc Bộ Tài chính. SSC giám sát: niêm yết, công bố thông tin, xử lý vi phạm, cấp phép quỹ đầu tư và công ty chứng khoán.\n\n**ROE**\nTỷ suất lợi nhuận trên vốn chủ sở hữu. Đo lường khả năng sinh lời trên mỗi đồng vốn cổ đông.\nCông thức: ROE = Lợi nhuận sau thuế / Vốn chủ sở hữu × 100%\nVí dụ: ROE = 20% nghĩa là mỗi 100 đồng vốn chủ sở hữu tạo ra 20 đồng lợi nhuận ròng.\n\n**Lợi nhuận gộp**\nPhần chênh lệch giữa doanh thu thuần và giá vốn hàng bán. Phản ánh hiệu quả sản xuất/cung cấp dịch vụ.\nCông thức: Lợi nhuận gộp = Doanh thu thuần - Giá vốn hàng bán\nVí dụ: Biên lợi nhuận gộp cao cho thấy công ty có lợi thế cạnh tranh về chi phí sản xuất.",
+      "contexts": [
+        "EBITDA\nLợi nhuận trước lãi vay, thuế, khấu hao và phân bổ. Đo lường hiệu quả hoạt động kinh doanh cốt lõi.",
+        "Ủy ban Chứng khoán Nhà nước (SSC)\nCơ quan quản lý thị trường chứng khoán Việt Nam, trực thuộc Bộ Tài chính. SSC giám sát: niêm yết, công bố thông tin, xử lý vi phạm, cấp phép quỹ đầu tư và công ty chứng khoán.",
+        "ROE\nTỷ suất lợi nhuận trên vốn chủ sở hữu. Đo lường khả năng sinh lời trên mỗi đồng vốn cổ đông.",
+        "Lợi nhuận gộp\nPhần chênh lệch giữa doanh thu thuần và giá vốn hàng bán. Phản ánh hiệu quả sản xuất/cung cấp dịch vụ.",
+        "Tỷ giá hối đoái (Exchange Rate)\nGiá của một đồng tiền tính bằng đồng tiền khác. Ảnh hưởng đến xuất nhập khẩu và doanh nghiệp FDI."
+      ],
+      "citations": [],
+      "knowledge_refs": [
+        "vietnam_market/Ủy ban Chứng khoán Nhà nước (SSC)",
+        "financial_terms/ROE",
+        "financial_terms/Lợi nhuận gộp"
+      ],
+      "intent": "concept_explain",
+      "tool_used": "explain_concept"
+    },
+    {
+      "case": {
+        "id": "concept_capm",
+        "question": "CAPM hoạt động ra sao?",
+        "expected_intent": "concept_explain",
+        "expected_titles": [
+          "CAPM"
+        ],
+        "reference_answer": "CAPM liên hệ lợi suất kỳ vọng với lãi suất phi rủi ro, beta và phần bù rủi ro thị trường."
+      },
+      "question": "CAPM hoạt động ra sao?",
+      "answer": "**VN30 Index**\nChỉ số VN30 gồm 30 cổ phiếu vốn hóa lớn nhất, thanh khoản cao nhất trên HOSE. Là benchmark chính cho thị trường phái sinh (hợp đồng tương lai VN30). Rà soát thành phần 6 tháng/lần.\n\n**Dòng tiền tự do**\nDòng tiền còn lại sau khi trừ chi phí vốn. Đo lường khả năng tạo tiền mặt thực sự của doanh nghiệp.\nCông thức: FCF = Dòng tiền hoạt động kinh doanh - Chi phí vốn (CAPEX)\nVí dụ: FCF dương cho thấy công ty tạo đủ tiền mặt để trả cổ tức, mua lại cổ phiếu, hoặc giảm nợ.\n\n**Mô hình định giá tài sản vốn (CAPM)**\nMô hình xác định lợi nhuận kỳ vọng của một tài sản dựa trên rủi ro hệ thống (beta).\nPython: `expected_return = risk_free + beta * (market_return - risk_free)`",
+      "contexts": [
+        "VN30 Index\nChỉ số VN30 gồm 30 cổ phiếu vốn hóa lớn nhất, thanh khoản cao nhất trên HOSE. Là benchmark chính cho thị trường phái sinh (hợp đồng tương lai VN30). Rà soát thành phần 6 tháng/lần.",
+        "Dòng tiền tự do\nDòng tiền còn lại sau khi trừ chi phí vốn. Đo lường khả năng tạo tiền mặt thực sự của doanh nghiệp.",
+        "Mô hình định giá tài sản vốn (CAPM)\nMô hình xác định lợi nhuận kỳ vọng của một tài sản dựa trên rủi ro hệ thống (beta).",
+        "ROE\nTỷ suất lợi nhuận trên vốn chủ sở hữu. Đo lường khả năng sinh lời trên mỗi đồng vốn cổ đông.",
+        "Tỷ giá hối đoái (Exchange Rate)\nGiá của một đồng tiền tính bằng đồng tiền khác. Ảnh hưởng đến xuất nhập khẩu và doanh nghiệp FDI."
+      ],
+      "citations": [],
+      "knowledge_refs": [
+        "vietnam_market/VN30 Index",
+        "financial_terms/Dòng tiền tự do",
+        "quant_finance/Mô hình định giá tài sản vốn (CAPM)"
+      ],
+      "intent": "concept_explain",
+      "tool_used": "explain_concept"
+    },
+    {
+      "case": {
+        "id": "concept_wacc",
+        "question": "WACC là gì?",
+        "expected_intent": "concept_explain",
+        "expected_titles": [
+          "WACC"
+        ],
+        "reference_answer": "WACC là chi phí vốn bình quân gia quyền của nợ và vốn chủ sở hữu."
+      },
+      "question": "WACC là gì?",
+      "answer": "**Chi phí vốn bình quân gia quyền (WACC)**\nChi phí trung bình để huy động vốn, tính trọng số giữa nợ vay và vốn chủ sở hữu.\nPython: `wacc = (equity/total * cost_equity) + (debt/total * cost_debt * (1 - tax_rate))`\n\n**Định giá bằng dòng tiền chiết khấu (DCF)**\nPhương pháp định giá doanh nghiệp bằng cách chiết khấu các dòng tiền tự do tương lai về giá trị hiện tại.\nPython: `npv = sum(fcf / (1 + wacc)**t for t, fcf in enumerate(fcf_list, 1)) + tv / (1 + wacc)**n`\n\n**VN30 Index**\nChỉ số VN30 gồm 30 cổ phiếu vốn hóa lớn nhất, thanh khoản cao nhất trên HOSE. Là benchmark chính cho thị trường phái sinh (hợp đồng tương lai VN30). Rà soát thành phần 6 tháng/lần.",
+      "contexts": [
+        "Chi phí vốn bình quân gia quyền (WACC)\nChi phí trung bình để huy động vốn, tính trọng số giữa nợ vay và vốn chủ sở hữu.",
+        "Định giá bằng dòng tiền chiết khấu (DCF)\nPhương pháp định giá doanh nghiệp bằng cách chiết khấu các dòng tiền tự do tương lai về giá trị hiện tại.",
+        "NIM\nBiên lãi ròng — chỉ tiêu đặc thù ngân hàng. Đo chênh lệch giữa thu nhập lãi và chi phí lãi.",
+        "VN30 Index\nChỉ số VN30 gồm 30 cổ phiếu vốn hóa lớn nhất, thanh khoản cao nhất trên HOSE. Là benchmark chính cho thị trường phái sinh (hợp đồng tương lai VN30). Rà soát thành phần 6 tháng/lần.",
+        "Chu kỳ T+2\nThanh toán giao dịch chứng khoán Việt Nam theo chu kỳ T+2 (2 ngày làm việc sau ngày giao dịch). Nghĩa là mua cổ phiếu thứ 2, tiền thanh toán thứ 4. Một số sản phẩm: T+0 (phái sinh)."
+      ],
+      "citations": [],
+      "knowledge_refs": [
+        "quant_finance/Chi phí vốn bình quân gia quyền (WACC)",
+        "quant_finance/Định giá bằng dòng tiền chiết khấu (DCF)",
+        "vietnam_market/VN30 Index"
+      ],
+      "intent": "concept_explain",
+      "tool_used": "explain_concept"
+    },
+    {
+      "case": {
+        "id": "concept_cpi",
+        "question": "CPI được tính như thế nào?",
+        "expected_intent": "concept_explain",
+        "expected_titles": [
+          "Lạm phát",
+          "CPI"
+        ],
+        "reference_answer": "CPI đo thay đổi giá của một rổ hàng hóa và dịch vụ theo thời gian."
+      },
+      "question": "CPI được tính như thế nào?",
+      "answer": "**Tỷ giá hối đoái (Exchange Rate)**\nGiá của một đồng tiền tính bằng đồng tiền khác. Ảnh hưởng đến xuất nhập khẩu và doanh nghiệp FDI.\nCông thức: Tỷ giá thực = Tỷ giá danh nghĩa × (CPI nước ngoài / CPI trong nước)\n\n**Lạm phát (Inflation)**\nSự tăng mức giá chung của hàng hóa và dịch vụ theo thời gian, dẫn đến sức mua của tiền tệ giảm. Đo bằng chỉ số CPI.\nCông thức: Tỷ lệ lạm phát = (CPI kỳ này - CPI kỳ trước) / CPI kỳ trước × 100%\n\n**Thuế TNDN (Corporate Income Tax)**\nThuế đánh trên lợi nhuận trước thuế của doanh nghiệp. Ảnh hưởng trực tiếp đến lợi nhuận sau thuế và EPS.\nCông thức: Thuế TNDN = Lợi nhuận trước thuế × Thuế suất (20%)",
+      "contexts": [
+        "Tỷ giá hối đoái (Exchange Rate)\nGiá của một đồng tiền tính bằng đồng tiền khác. Ảnh hưởng đến xuất nhập khẩu và doanh nghiệp FDI.",
+        "Lạm phát (Inflation)\nSự tăng mức giá chung của hàng hóa và dịch vụ theo thời gian, dẫn đến sức mua của tiền tệ giảm. Đo bằng chỉ số CPI.",
+        "Thuế TNDN (Corporate Income Tax)\nThuế đánh trên lợi nhuận trước thuế của doanh nghiệp. Ảnh hưởng trực tiếp đến lợi nhuận sau thuế và EPS.",
+        "Tổng sản phẩm quốc nội (GDP)\nTổng giá trị hàng hóa và dịch vụ cuối cùng được sản xuất trong phạm vi lãnh thổ quốc gia trong một khoảng thời gian. GDP Việt Nam 2024 ước đạt ~430 tỷ USD.",
+        "Chỉ số VN-Index\nChỉ số giá cổ phiếu đại diện cho sàn HOSE, tính theo phương pháp vốn hóa thị trường. Năm cơ sở: 2000 (100 điểm). ATH: ~1,500 điểm (2022). Các bluechip chiếm >60% trọng số: VCB, VHM, VIC, BID, CTG."
+      ],
+      "citations": [],
+      "knowledge_refs": [
+        "economics_theory/Tỷ giá hối đoái (Exchange Rate)",
+        "economics_theory/Lạm phát (Inflation)",
+        "economics_theory/Thuế TNDN (Corporate Income Tax)"
+      ],
+      "intent": "concept_explain",
+      "tool_used": "explain_concept"
+    },
+    {
+      "case": {
+        "id": "macro_definition",
+        "question": "GDP là gì?",
+        "expected_intent": "concept_explain",
+        "expected_titles": [
+          "GDP"
+        ],
+        "reference_answer": "GDP là giá trị hàng hóa và dịch vụ cuối cùng được sản xuất trong một lãnh thổ trong một thời kỳ."
+      },
+      "question": "GDP là gì?",
+      "answer": "**Tổng sản phẩm quốc nội (GDP)**\nTổng giá trị hàng hóa và dịch vụ cuối cùng được sản xuất trong phạm vi lãnh thổ quốc gia trong một khoảng thời gian. GDP Việt Nam 2024 ước đạt ~430 tỷ USD.\nCông thức: GDP = C + I + G + (X - M)\n\n**Chu kỳ kinh doanh (Business Cycle)**\nSự biến động tuần hoàn của nền kinh tế qua 4 giai đoạn: tăng trưởng (expansion), đỉnh (peak), suy thoái (recession), đáy (trough).\nCông thức: GDP gap = GDP thực tế - GDP tiềm năng\n\n**NIM**\nBiên lãi ròng — chỉ tiêu đặc thù ngân hàng. Đo chênh lệch giữa thu nhập lãi và chi phí lãi.\nCông thức: NIM = (Thu nhập lãi - Chi phí lãi) / Tài sản sinh lãi bình quân\nVí dụ: NIM 3.5% nghĩa là ngân hàng kiếm được 3.5% trên mỗi đồng tài sản sinh lãi.",
+      "contexts": [
+        "Tổng sản phẩm quốc nội (GDP)\nTổng giá trị hàng hóa và dịch vụ cuối cùng được sản xuất trong phạm vi lãnh thổ quốc gia trong một khoảng thời gian. GDP Việt Nam 2024 ước đạt ~430 tỷ USD.",
+        "Chu kỳ kinh doanh (Business Cycle)\nSự biến động tuần hoàn của nền kinh tế qua 4 giai đoạn: tăng trưởng (expansion), đỉnh (peak), suy thoái (recession), đáy (trough).",
+        "NIM\nBiên lãi ròng — chỉ tiêu đặc thù ngân hàng. Đo chênh lệch giữa thu nhập lãi và chi phí lãi.",
+        "P/E\nTỷ số giá trên lợi nhuận. Cho biết nhà đầu tư sẵn sàng trả bao nhiêu cho mỗi đồng lợi nhuận.",
+        "Doanh thu thuần\nTổng doanh thu sau khi trừ các khoản giảm trừ (chiết khấu, giảm giá, hàng bán trả lại, thuế tiêu thụ đặc biệt)."
+      ],
+      "citations": [],
+      "knowledge_refs": [
+        "economics_theory/Tổng sản phẩm quốc nội (GDP)",
+        "economics_theory/Chu kỳ kinh doanh (Business Cycle)",
+        "financial_terms/NIM"
+      ],
+      "intent": "concept_explain",
+      "tool_used": "explain_concept"
+    },
+    {
+      "case": {
+        "id": "live_pe",
+        "question": "P/E của FPT hiện tại là bao nhiêu?",
+        "expected_intent": "market_data",
+        "expected_titles": [],
+        "reference_answer": "Câu trả lời phải truy vấn nguồn dữ liệu thị trường hiện thời và nêu thời điểm hoặc nguồn."
+      },
+      "question": "P/E của FPT hiện tại là bao nhiêu?",
+      "answer": "**Dữ liệu thị trường FPT**\n- P/E trailing: 12.38x\n\nNguồn: vnstock, yahoo_finance; dữ liệu có thể trễ so với giao dịch thực tế.",
+      "contexts": [],
+      "citations": [
+        {
+          "source": "vnstock, yahoo_finance",
+          "ticker": "FPT",
+          "retrieved_at": "2026-08-18T14:35:01.938752+00:00"
+        }
+      ],
+      "knowledge_refs": [],
+      "intent": "market_data",
+      "tool_used": "market_data"
+    },
+    {
+      "case": {
+        "id": "live_cpi",
+        "question": "CPI Việt Nam hiện tại?",
+        "expected_intent": "market_data",
+        "expected_titles": [],
+        "reference_answer": "Câu trả lời phải lấy quan sát CPI hiện thời từ nguồn vĩ mô, không dùng seed knowledge làm số liệu hiện tại."
+      },
+      "question": "CPI Việt Nam hiện tại?",
+      "answer": "Chưa có nguồn EcoData đã cấu hình để lấy CPI thời gian thực.",
+      "contexts": [],
+      "citations": [],
+      "knowledge_refs": [],
+      "intent": "market_data",
+      "tool_used": "market_data"
+    },
+    {
+      "case": {
+        "id": "market_interpret",
+        "question": "P/E FPT hiện tại cao hay thấp?",
+        "expected_intent": "market_and_knowledge",
+        "expected_titles": [
+          "P/E"
+        ],
+        "reference_answer": "Câu trả lời phải tách dữ liệu P/E hiện thời khỏi diễn giải, không kết luận chỉ bằng một ngưỡng cố định."
+      },
+      "question": "P/E FPT hiện tại cao hay thấp?",
+      "answer": "**Dữ liệu thị trường FPT**\n- P/E trailing: 12.38x\n\nNguồn: vnstock, yahoo_finance; dữ liệu có thể trễ so với giao dịch thực tế.\n\n**Diễn giải**\nP/E hiện tại là 12.38x. P/E cao hay thấp chỉ có ý nghĩa khi so với lịch sử của doanh nghiệp, các công ty cùng ngành và triển vọng tăng trưởng/lợi nhuận; không nên dùng một ngưỡng cố định để kết luận cổ phiếu đắt hay rẻ.",
+      "contexts": [
+        "ROA\nTỷ suất lợi nhuận trên tổng tài sản. Đo hiệu quả sử dụng tài sản để tạo lợi nhuận.",
+        "Định giá bằng dòng tiền chiết khấu (DCF)\nPhương pháp định giá doanh nghiệp bằng cách chiết khấu các dòng tiền tự do tương lai về giá trị hiện tại.",
+        "P/E\nTỷ số giá trên lợi nhuận. Cho biết nhà đầu tư sẵn sàng trả bao nhiêu cho mỗi đồng lợi nhuận.",
+        "P/B\nTỷ số giá trên giá trị sổ sách. So sánh giá thị trường với giá trị tài sản ròng.",
+        "Đa dạng hóa danh mục (Portfolio Diversification)\nChiến lược giảm rủi ro bằng cách đầu tư vào nhiều tài sản khác nhau có tương quan thấp."
+      ],
+      "citations": [
+        {
+          "source": "vnstock, yahoo_finance",
+          "ticker": "FPT",
+          "retrieved_at": "2026-08-18T14:35:02.856644+00:00"
+        }
+      ],
+      "knowledge_refs": [
+        "financial_terms/ROA",
+        "financial_terms/P/E"
+      ],
+      "intent": "market_and_knowledge",
+      "tool_used": "market_data"
+    },
+    {
+      "case": {
+        "id": "statement_metric",
+        "question": "Doanh thu thuần của VCB năm 2024 là bao nhiêu?",
+        "expected_intent": "metric_lookup",
+        "expected_titles": [],
+        "reference_answer": "Câu trả lời phải nêu năm, đơn vị và nguồn báo cáo tài chính đã xác thực; không dùng dữ liệu giả."
+      },
+      "question": "Doanh thu thuần của VCB năm 2024 là bao nhiêu?",
+      "answer": "Không có dữ liệu",
+      "contexts": [],
+      "citations": [],
+      "knowledge_refs": [],
+      "intent": "metric_lookup",
+      "tool_used": "stock_analysis"
+    },
+    {
+      "case": {
+        "id": "portfolio",
+        "question": "Sharpe ratio trong danh mục có ý nghĩa gì?",
+        "expected_intent": "concept_explain",
+        "expected_titles": [
+          "Sharpe"
+        ],
+        "reference_answer": "Sharpe ratio đo lợi suất vượt trội trên mỗi đơn vị rủi ro."
+      },
+      "question": "Sharpe ratio trong danh mục có ý nghĩa gì?",
+      "answer": "Hãy cho biết mã cổ phiếu, ví dụ FPT hoặc VCB.",
+      "contexts": [
+        "Sharpe Ratio\nTỷ số Sharpe đo lường lợi nhuận vượt trội trên mỗi đơn vị rủi ro. Càng cao càng tốt.",
+        "Chu kỳ T+2\nThanh toán giao dịch chứng khoán Việt Nam theo chu kỳ T+2 (2 ngày làm việc sau ngày giao dịch). Nghĩa là mua cổ phiếu thứ 2, tiền thanh toán thứ 4. Một số sản phẩm: T+0 (phái sinh).",
+        "Tỷ giá hối đoái (Exchange Rate)\nGiá của một đồng tiền tính bằng đồng tiền khác. Ảnh hưởng đến xuất nhập khẩu và doanh nghiệp FDI.",
+        "Hệ số thanh khoản hiện hành\nĐo lường khả năng thanh toán nợ ngắn hạn bằng tài sản ngắn hạn.",
+        "Đa dạng hóa danh mục (Portfolio Diversification)\nChiến lược giảm rủi ro bằng cách đầu tư vào nhiều tài sản khác nhau có tương quan thấp."
+      ],
+      "citations": [],
+      "knowledge_refs": [],
+      "intent": "market_and_knowledge",
+      "tool_used": "market_data"
+    }
+  ],
+  "deepeval": {
+    "status": "skipped",
+    "reason": "Missing dependency: No module named 'deepeval'"
+  }
+}

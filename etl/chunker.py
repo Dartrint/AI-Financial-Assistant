@@ -8,7 +8,6 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ def chunk_document(
     content: str,
     source: str,
     category: str,
-    tags: Optional[list[str]] = None,
+    tags: list[str] | None = None,
     updated_at: str = "",
     chunk_size: int = CHUNK_SIZE,
     chunk_overlap: int = CHUNK_OVERLAP,

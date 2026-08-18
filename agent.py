@@ -23,8 +23,6 @@ import os
 import re
 import textwrap
 import unicodedata
-from dataclasses import dataclass, field
-from typing import Any, Optional
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -153,7 +151,7 @@ def classify_intent(question: str) -> str:
 # Step 2: Entity Extractor
 # ---------------------------------------------------------------------------
 
-def _fuzzy_match_company(token: str, choices: list[str], cutoff: float = 0.75) -> Optional[str]:
+def _fuzzy_match_company(token: str, choices: list[str], cutoff: float = 0.75) -> str | None:
     matches = difflib.get_close_matches(token, choices, n=1, cutoff=cutoff)
     return matches[0] if matches else None
 
@@ -301,7 +299,7 @@ class FinancialAgent:
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
+        dataset: pd.DataFrame | None = None,
         llm_router=None,
         retriever=None,
         tool_registry=None,
@@ -336,8 +334,8 @@ class FinancialAgent:
     def retriever(self):
         if self._retriever is None:
             try:
-                from retrieval.hybrid_retriever import HybridRetriever
                 from knowledge.loader import KnowledgeBase
+                from retrieval.hybrid_retriever import HybridRetriever
                 kb = KnowledgeBase()
                 self._retriever = HybridRetriever(
                     knowledge_base=kb,
@@ -354,11 +352,11 @@ class FinancialAgent:
         if self._tool_registry is None:
             try:
                 from tools.base import ToolRegistry
-                from tools.stock_analysis import StockAnalysisTool
                 from tools.economic_analysis import EconomicAnalysisTool
                 from tools.explain_concept import ExplainConceptTool
-                from tools.portfolio_metrics import PortfolioMetricsTool
                 from tools.market_data import MarketDataTool
+                from tools.portfolio_metrics import PortfolioMetricsTool
+                from tools.stock_analysis import StockAnalysisTool
 
                 registry = ToolRegistry()
                 registry.register(StockAnalysisTool())

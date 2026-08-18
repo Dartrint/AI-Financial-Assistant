@@ -134,11 +134,11 @@ async def _background_init(symbols: list[str], years: list[int]) -> None:
         # 5. Tools Layer
         logger.info("[STARTUP] Initializing Tools Layer...")
         from tools.base import ToolRegistry
-        from tools.stock_analysis import StockAnalysisTool
         from tools.economic_analysis import EconomicAnalysisTool
         from tools.explain_concept import ExplainConceptTool
-        from tools.portfolio_metrics import PortfolioMetricsTool
         from tools.market_data import MarketDataTool
+        from tools.portfolio_metrics import PortfolioMetricsTool
+        from tools.stock_analysis import StockAnalysisTool
         state.tool_registry = ToolRegistry()
         state.tool_registry.register(StockAnalysisTool())
         state.tool_registry.register(EconomicAnalysisTool())

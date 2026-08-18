@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from typing import Optional
 
 from config import BGE_MODEL
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 def load_chunks_to_qdrant(
     chunks: list,  # list[Chunk]
     collection_name: str,
-    qdrant_path: Optional[str] = None,
+    qdrant_path: str | None = None,
     batch_size: int = 64,
 ) -> int:
     """
@@ -96,7 +95,7 @@ def load_seed_json_to_qdrant(
     json_path: str,
     collection_name: str,
     category: str,
-    qdrant_path: Optional[str] = None,
+    qdrant_path: str | None = None,
 ) -> int:
     """Load a seed JSON knowledge file into Qdrant."""
     import json

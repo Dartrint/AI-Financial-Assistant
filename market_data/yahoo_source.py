@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 import pandas as pd
 
-from config import SUPPORTED_TICKERS, LINE_ITEM_PATTERNS
+from config import SUPPORTED_TICKERS
 from market_data.base import DataSource, HealthStatus
 
 logger = logging.getLogger(__name__)

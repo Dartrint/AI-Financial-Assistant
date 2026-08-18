@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Optional
 
 import pandas as pd
 
@@ -27,7 +26,7 @@ class DataAggregator:
     Configurable via DATA_SOURCE_PRIORITY env var.
     """
 
-    def __init__(self, sources: Optional[list[DataSource]] = None):
+    def __init__(self, sources: list[DataSource] | None = None):
         if sources is not None:
             self._sources = {s.name: s for s in sources}
         else:
@@ -66,7 +65,7 @@ class DataAggregator:
     def priority(self) -> list[str]:
         return self._priority
 
-    def get_source(self, name: str) -> Optional[DataSource]:
+    def get_source(self, name: str) -> DataSource | None:
         return self._sources.get(name)
 
     def health_check_all(self) -> dict[str, HealthStatus]:
@@ -85,7 +84,7 @@ class DataAggregator:
         self,
         ticker: str,
         years: list[int],
-        preferred_source: Optional[str] = None,
+        preferred_source: str | None = None,
         use_mock_fallback: bool = False,
     ) -> pd.DataFrame:
         """

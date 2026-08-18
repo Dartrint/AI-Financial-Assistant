@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -16,10 +16,10 @@ class ToolResult:
     success: bool
     data: dict[str, Any] = field(default_factory=dict)
     answer_text: str = ""
-    chart_data: Optional[dict] = None
+    chart_data: dict | None = None
     citations: list[dict] = field(default_factory=list)
     knowledge_refs: list[str] = field(default_factory=list)
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class Tool(ABC):
@@ -63,7 +63,7 @@ class ToolRegistry:
     def register(self, tool: Tool) -> None:
         self._tools[tool.name] = tool
 
-    def get(self, name: str) -> Optional[Tool]:
+    def get(self, name: str) -> Tool | None:
         return self._tools.get(name)
 
     def list_tools(self) -> list[dict[str, str]]:
@@ -75,7 +75,7 @@ class ToolRegistry:
     def all_tools(self) -> dict[str, Tool]:
         return dict(self._tools)
 
-    def select_tool(self, intent: str, entities: dict) -> Optional[Tool]:
+    def select_tool(self, intent: str, entities: dict) -> Tool | None:
         """Select the best tool based on intent and entities."""
         intent_tool_map = {
             "market_data": "market_data",

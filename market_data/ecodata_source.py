@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Optional
 
 import pandas as pd
 import requests
@@ -32,7 +31,7 @@ STATEMENT_TYPE_MAP = {
 }
 
 
-def _normalize_line_item(raw_name: str) -> Optional[str]:
+def _normalize_line_item(raw_name: str) -> str | None:
     key = raw_name.lower().strip()
     for normalized, patterns in LINE_ITEM_PATTERNS.items():
         for pattern in patterns:
@@ -41,7 +40,7 @@ def _normalize_line_item(raw_name: str) -> Optional[str]:
     return None
 
 
-def _make_request(endpoint: str, params: Optional[dict] = None, timeout: int = 15) -> dict:
+def _make_request(endpoint: str, params: dict | None = None, timeout: int = 15) -> dict:
     if not ECODATA_API_KEY:
         raise ValueError("ECODATA_API_KEY not configured")
     url = f"{ECODATA_BASE_URL}{endpoint}"

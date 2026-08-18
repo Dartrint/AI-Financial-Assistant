@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
-from config import RATIO_DEFINITIONS, SUPPORTED_TICKERS
+from config import RATIO_DEFINITIONS
 from tools.base import Tool, ToolResult
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def _format_percent(v: float) -> str:
     return f"{v:.2f}%"
 
 
-def _get_value(df: pd.DataFrame, metric: str, company: str, year: int) -> Optional[float]:
+def _get_value(df: pd.DataFrame, metric: str, company: str, year: int) -> float | None:
     rows = df[
         (df["company_code"] == company)
         & (df["year"] == year)

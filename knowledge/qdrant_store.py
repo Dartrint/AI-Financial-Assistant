@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from config import BGE_MODEL
 
@@ -56,7 +56,7 @@ class QdrantKnowledgeStore:
     def search(
         self,
         query: str,
-        collections: Optional[list[str]] = None,
+        collections: list[str] | None = None,
         top_k: int = 5,
     ) -> list[SearchResult]:
         """

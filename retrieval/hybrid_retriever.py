@@ -7,8 +7,7 @@ from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from knowledge.loader import KnowledgeBase, KnowledgeDocument
 from retrieval.bm25_retriever import BM25Retriever
@@ -41,7 +40,7 @@ class HybridRetriever:
 
     def __init__(
         self,
-        knowledge_base: Optional[KnowledgeBase] = None,
+        knowledge_base: KnowledgeBase | None = None,
         mode: str = RETRIEVAL_MODE,
         use_reranker: bool = True,
         llm_router=None,
@@ -58,7 +57,7 @@ class HybridRetriever:
         self._document_positions: dict[str, int] = {}
         self._indexed = False
 
-    def build_index(self, knowledge_base: Optional[KnowledgeBase] = None) -> None:
+    def build_index(self, knowledge_base: KnowledgeBase | None = None) -> None:
         """Build retrieval indices from knowledge base."""
         kb = knowledge_base or self._kb
         if kb is None:
@@ -179,7 +178,7 @@ class HybridRetriever:
         self,
         query: str,
         top_k: int = 5,
-        variants: Optional[list[str]] = None,
+        variants: list[str] | None = None,
     ) -> list[RetrievalResult]:
         """Fuse query variants by rank while preserving document identity."""
         variants = variants or self._get_query_variants(query)

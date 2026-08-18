@@ -11,7 +11,6 @@ from typing import Any
 
 from tools.base import Tool, ToolResult
 
-
 _METRICS = {
     "current_price": "Giá hiện tại",
     "pe_ratio": "P/E trailing",

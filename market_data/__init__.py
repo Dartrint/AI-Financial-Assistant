@@ -7,7 +7,7 @@ Sources:
   - Yahoo Finance: Global market data (yfinance)
 """
 
-from market_data.base import DataSource, FinancialRecord
 from market_data.aggregator import DataAggregator
+from market_data.base import DataSource, FinancialRecord
 
-__all__ = ["DataSource", "FinancialRecord", "DataAggregator"]
+__all__ = ["DataAggregator", "DataSource", "FinancialRecord"]

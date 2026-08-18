@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -23,7 +23,7 @@ class FinancialRecord:
     year: int
     statement_type: str  # ket_qua_kinh_doanh | bang_can_doi_ke_toan | luu_chuyen_tien_te
     line_item: str  # Original name from source
-    line_item_normalized: Optional[str]  # Normalized key (e.g. doanh_thu_thuan)
+    line_item_normalized: str | None  # Normalized key (e.g. doanh_thu_thuan)
     value: float
     unit: str = "VND"
     source_file: str = ""

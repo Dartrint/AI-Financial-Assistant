@@ -6,7 +6,6 @@ Dense embedding retrieval using BGE model via sentence-transformers.
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 
 import numpy as np
