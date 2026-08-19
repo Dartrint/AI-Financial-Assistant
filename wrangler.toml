@@ -1,0 +1,19 @@
+name = "ai-financial-assistant"
+main = "worker.js"
+compatibility_date = "2024-08-20"
+
+[vars]
+GROQ_MODEL = "qwen/qwen3.6-27b"
+GEMINI_MODEL = "gemini-3.6-flash"
+LLM_PRIORITY = "groq,gemini"
+DATA_SOURCE_PRIORITY = "vnstock,yahoo_finance,ecodata"
+ECODATA_BASE_URL = "https://api.ecodata.ai/v1"
+SUPPORTED_SYMBOLS = "VCB,BID,VNM,CTG,FPT,VIC,MSN,VJC,SAB,HPG,MWG,VRE,HDB,TCB,VPB"
+SUPPORTED_YEARS = "2020,2021,2022,2023,2024"
+BGE_MODEL = "BAAI/bge-small-en-v1.5"
+RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+RETRIEVAL_MODE = "hybrid"
+QUERY_EXPANSION_ENABLED = "true"
+
+[secrets]
+required = ["GROQ_API_KEY", "GEMINI_API_KEY", "ECODATA_API_KEY"]
