@@ -13,16 +13,14 @@ from llm.base import LLMProvider, LLMResponse
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-
 
 class GeminiProvider(LLMProvider):
     """Google Gemini LLM provider."""
 
-    def __init__(self, api_key: str = API_KEY, model: str = DEFAULT_MODEL):
-        self._api_key = api_key
-        self._model = model
+    def __init__(self, api_key: str | None = None, model: str | None = None):
+        # Read env at init time (after load_dotenv in app.py)
+        self._api_key = api_key or os.getenv("GEMINI_API_KEY", "")
+        self._model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self._client = None
 
     @property

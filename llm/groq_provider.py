@@ -13,18 +13,14 @@ from llm.base import LLMProvider, LLMResponse
 
 logger = logging.getLogger(__name__)
 
-# GROQ_* is the supported spelling. QROQ_* is retained for existing .env files
-# created by the first prototype.
-DEFAULT_MODEL = os.getenv("GROQ_MODEL") or os.getenv("QROQ_MODEL", "qwen/qwen3.6-27b")
-API_KEY = os.getenv("GROQ_API_KEY") or os.getenv("QROQ_API_KEY", "")
-
 
 class GroqProvider(LLMProvider):
     """Groq cloud LLM provider."""
 
-    def __init__(self, api_key: str = API_KEY, model: str = DEFAULT_MODEL):
-        self._api_key = api_key
-        self._model = model
+    def __init__(self, api_key: str | None = None, model: str | None = None):
+        # Read env at init time (after load_dotenv in app.py)
+        self._api_key = api_key or os.getenv("GROQ_API_KEY") or os.getenv("QROQ_API_KEY", "")
+        self._model = model or os.getenv("GROQ_MODEL") or os.getenv("QROQ_MODEL", "qwen/qwen3.6-27b")
         self._client = None
 
     @property
