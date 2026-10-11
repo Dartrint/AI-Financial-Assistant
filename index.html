@@ -23,11 +23,24 @@
           Theo dõi giá cổ phiếu Việt Nam và tìm hiểu tài chính cùng AI.
         </p>
 
+        <nav class="session-nav" aria-label="Các phiên phân tích">
+          <div class="session-nav-header">
+            <span class="sidebar-label">PHIÊN PHÂN TÍCH</span>
+            <button id="new-session" class="new-session-button" type="button" aria-label="Tạo phiên phân tích mới">
+              <span aria-hidden="true">+</span> Phiên mới
+            </button>
+          </div>
+          <label class="visually-hidden" for="session-search">Tìm phiên phân tích</label>
+          <input id="session-search" class="session-search" type="search" placeholder="Tìm phiên…" autocomplete="off" />
+          <div id="session-list" class="session-list" role="list" aria-label="Lịch sử phiên phân tích"></div>
+          <p id="session-empty" class="session-empty">Các câu hỏi của bạn sẽ được nhóm theo phiên tại đây.</p>
+        </nav>
+
         <div class="sidebar-note">
           <span class="status-dot"></span>
           <div>
             <strong>Dùng thử công khai</strong>
-            <p>Không cần đăng nhập. Hội thoại khách không được lưu.</p>
+            <p>Khách lưu trên thiết bị này. Đăng nhập để đồng bộ riêng tư.</p>
           </div>
         </div>
       </aside>
@@ -84,6 +97,47 @@
               Nguồn: <a href="https://finance.yahoo.com/" target="_blank" rel="noreferrer">Yahoo Finance</a>.
               Dữ liệu có thể trễ hoặc không đầy đủ; chỉ dùng tham khảo, không phải dữ liệu giao dịch hay tư vấn đầu tư.
             </p>
+            <section class="history-chart" aria-labelledby="history-chart-title">
+              <div class="chart-toolbar">
+                <div>
+                  <h3 id="history-chart-title">Diễn biến giá</h3>
+                  <p id="chart-summary" class="chart-summary">Chọn mã và khoảng thời gian để xem giá đóng cửa.</p>
+                </div>
+                <div class="chart-controls">
+                  <label class="visually-hidden" for="chart-symbol">Mã cổ phiếu trên biểu đồ</label>
+                  <select id="chart-symbol" aria-label="Mã cổ phiếu trên biểu đồ">
+                    <option value="FPT">FPT</option>
+                    <option value="VCB">VCB</option>
+                    <option value="BID">BID</option>
+                    <option value="CTG">CTG</option>
+                    <option value="HPG">HPG</option>
+                    <option value="VNM">VNM</option>
+                    <option value="VIC">VIC</option>
+                    <option value="MSN">MSN</option>
+                    <option value="VJC">VJC</option>
+                    <option value="SAB">SAB</option>
+                    <option value="MWG">MWG</option>
+                    <option value="VRE">VRE</option>
+                    <option value="HDB">HDB</option>
+                    <option value="TCB">TCB</option>
+                    <option value="VPB">VPB</option>
+                  </select>
+                  <div class="period-tabs" role="group" aria-label="Khoảng thời gian biểu đồ">
+                    <button type="button" data-chart-range="1mo" aria-pressed="false">1T</button>
+                    <button type="button" data-chart-range="3mo" aria-pressed="true">3T</button>
+                    <button type="button" data-chart-range="6mo" aria-pressed="false">6T</button>
+                    <button type="button" data-chart-range="1y" aria-pressed="false">1N</button>
+                    <button type="button" data-chart-range="5y" aria-pressed="false">5N</button>
+                  </div>
+                  <button id="refresh-chart" class="button button-quiet chart-refresh" type="button">Làm mới</button>
+                </div>
+              </div>
+              <div id="chart-status" class="chart-status" aria-live="polite">Đang tải lịch sử giá…</div>
+              <div id="history-chart" class="history-chart-canvas" aria-live="polite"></div>
+              <p class="chart-disclaimer">
+                Giá đóng cửa tham khảo, có thể trễ và chưa điều chỉnh cổ tức/chia tách. Nguồn Yahoo Finance; không phải khuyến nghị đầu tư.
+              </p>
+            </section>
           </section>
 
           <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
@@ -107,9 +161,22 @@
               <div>
                 <p class="eyebrow">TRỢ LÝ AI</p>
                 <h2>Hỏi về tài chính</h2>
-                <p id="chat-subtitle">Bạn đang dùng thử với tư cách khách. Hội thoại không được lưu.</p>
+                <p id="chat-subtitle">Phiên khách · Hội thoại được lưu trên thiết bị này.</p>
               </div>
               <div class="chat-actions">
+                <details class="usage-guide">
+                  <summary>Hướng dẫn sử dụng</summary>
+                  <div class="guide-content">
+                    <h3>Bắt đầu với Findata</h3>
+                    <ol>
+                      <li>Hỏi khái niệm như ROE, dòng tiền hoặc cách đọc báo cáo.</li>
+                      <li>Chọn mã và khoảng thời gian trong mục <strong>Diễn biến giá</strong> để xem lịch sử.</li>
+                      <li>Tạo phiên mới để tách chủ đề; chọn lại phiên trong danh sách để tiếp tục.</li>
+                    </ol>
+                    <p>Dữ liệu thị trường có thể trễ. Chưa có P/E, báo cáo doanh nghiệp hoặc tư vấn mua bán.</p>
+                    <button class="guide-example" type="button" data-question="Giải thích ROE bằng một ví dụ giả định và nêu các điểm cần lưu ý.">Thử hỏi về ROE</button>
+                  </div>
+                </details>
                 <button id="auth-toggle" class="button button-quiet" type="button" aria-expanded="false" aria-controls="auth-panel">
                   Đăng nhập để lưu lịch sử
                 </button>
@@ -120,8 +187,8 @@
             <div class="capability-notice">
               <span aria-hidden="true">i</span>
               <p>
-                Trợ lý dùng Qwen3 trên Cloudflare AI, trình bày câu trả lời dễ đọc và có thể vẽ biểu đồ từ giá nguồn.
-                Dữ liệu hiện chưa gồm lịch sử giá, P/E hay báo cáo tài chính; không thay thế tư vấn đầu tư.
+                Trợ lý dùng Qwen3 trên Cloudflare AI để giải thích kiến thức tài chính. Mục Diễn biến giá hiển thị lịch sử giá đóng cửa từ nguồn tham khảo.
+                P/E và báo cáo tài chính chưa được kết nối; nội dung không thay thế tư vấn đầu tư.
               </p>
             </div>
 
@@ -129,11 +196,11 @@
               <div id="welcome" class="welcome">
                 <span class="welcome-mark">F</span>
                 <h3>Bạn muốn tìm hiểu điều gì?</h3>
-                <p>Câu trả lời được tạo bởi AI và không thay thế tư vấn đầu tư.</p>
+                <p>Phiên phân tích giúp tách riêng các chủ đề. Chọn một câu hỏi gợi ý hoặc bắt đầu nhập.</p>
                 <div class="suggestions">
                   <button class="suggestion" type="button" data-question="ROE là gì và được tính như thế nào?">ROE là gì?</button>
-                  <button class="suggestion" type="button" data-question="Giải thích sự khác nhau giữa P/E và P/B.">P/E và P/B</button>
-                  <button class="suggestion" type="button" data-question="Nhà đầu tư nên đọc báo cáo lưu chuyển tiền tệ như thế nào?">Đọc báo cáo lưu chuyển tiền tệ</button>
+                  <button class="suggestion" type="button" data-question="Giải thích sự khác nhau giữa P/E và P/B, kèm ví dụ giả định.">P/E và P/B</button>
+                  <button class="suggestion" type="button" data-question="Cách xem và đọc biểu đồ giá cổ phiếu trên Findata?">Cách đọc biểu đồ</button>
                 </div>
               </div>
             </div>
@@ -155,6 +222,12 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <template id="session-item-template">
+      <div class="session-item" role="listitem">
+        <button class="session-select" type="button"></button>
+        <button class="session-remove" type="button" aria-label="Xóa phiên chat" title="Xóa phiên">×</button>
+      </div>
+    </template>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -23,6 +23,15 @@ const elements = {
   authToggle: document.querySelector("#auth-toggle"),
   chatForm: document.querySelector("#chat-form"),
   chatPanel: document.querySelector("#chat-panel"),
+  chartStatus: document.querySelector("#chart-status"),
+  chartSummary: document.querySelector("#chart-summary"),
+  chartSymbol: document.querySelector("#chart-symbol"),
+  historyChart: document.querySelector("#history-chart"),
+  refreshChart: document.querySelector("#refresh-chart"),
+  newSession: document.querySelector("#new-session"),
+  sessionEmpty: document.querySelector("#session-empty"),
+  sessionList: document.querySelector("#session-list"),
+  sessionSearch: document.querySelector("#session-search"),
   marketQuotes: document.querySelector("#market-quotes"),
   marketUpdated: document.querySelector("#market-updated"),
   refreshMarket: document.querySelector("#refresh-market"),
@@ -35,10 +44,20 @@ const elements = {
 };
 
 const tickers = ["VCB", "BID", "CTG", "VNM", "FPT", "VIC", "MSN", "VJC", "SAB", "HPG", "MWG", "VRE", "HDB", "TCB", "VPB"];
+const guestStorageKey = "findata-guest-sessions-v1";
 let supabase;
 let toastTimeout;
 let authPanelOpen = false;
 let activeUserId;
+let activeSessionId = null;
+let sessions = [];
+let guestSessions = [];
+let chartRange = "3mo";
+let chartRequestId = 0;
+let authTransitionId = 0;
+let sessionRequestId = 0;
+let sessionInitializationInProgress = false;
+let sending = false;
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -272,6 +291,355 @@ function renderHistory(messages) {
   }
 }
 
+function makeSession() {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: "Cuộc trò chuyện mới",
+    created_at: now,
+    updated_at: now,
+    messages: [],
+  };
+}
+
+function saveGuestSessions() {
+  try {
+    const retainedSessions = [...guestSessions]
+      .sort((first, second) =>
+        Date.parse(second.updated_at) - Date.parse(first.updated_at)
+      )
+      .slice(0, 50);
+    let serialized = JSON.stringify(retainedSessions);
+    let trimmed = retainedSessions.length < guestSessions.length;
+
+    while (serialized.length > 1_500_000 && retainedSessions.length > 1) {
+      retainedSessions.pop();
+      serialized = JSON.stringify(retainedSessions);
+      trimmed = true;
+    }
+    while (
+      serialized.length > 1_500_000 &&
+      retainedSessions[0].messages.length > 1
+    ) {
+      const messages = retainedSessions[0].messages;
+      messages.splice(0, Math.ceil(messages.length / 2));
+      serialized = JSON.stringify(retainedSessions);
+      trimmed = true;
+    }
+
+    guestSessions.splice(0, guestSessions.length, ...retainedSessions);
+    localStorage.setItem(guestStorageKey, serialized);
+    if (trimmed) {
+      showToast("Đã giữ các phiên gần đây để không vượt dung lượng lưu trên thiết bị.");
+    }
+  } catch (error) {
+    console.error("Unable to save guest sessions on this device.", error);
+    showToast("Không thể lưu phiên trên thiết bị này. Hãy kiểm tra dung lượng trình duyệt.");
+  }
+}
+
+function readStoredValue(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.error("Unable to access the browser's local storage.", error);
+    return null;
+  }
+}
+
+function readGuestSessions() {
+  try {
+    const stored = JSON.parse(readStoredValue(guestStorageKey) ?? "[]");
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .filter((session) =>
+        session &&
+        typeof session.id === "string" &&
+        /^[\da-f-]{36}$/i.test(session.id) &&
+        typeof session.title === "string" &&
+        Array.isArray(session.messages)
+      )
+      .map((session) => ({
+        id: session.id,
+        title: session.title.slice(0, 80) || "Cuộc trò chuyện mới",
+        created_at: typeof session.created_at === "string"
+          ? session.created_at
+          : new Date().toISOString(),
+        updated_at: typeof session.updated_at === "string"
+          ? session.updated_at
+          : new Date().toISOString(),
+        messages: session.messages
+          .filter((message) =>
+            message &&
+            (message.role === "user" || message.role === "assistant") &&
+            typeof message.content === "string"
+          )
+          .slice(-200)
+          .map((message) => ({
+            role: message.role,
+            content: message.content.slice(0, 20_000),
+            metadata: message.metadata && typeof message.metadata === "object"
+              ? message.metadata
+              : {},
+          })),
+      }))
+      .slice(0, 100);
+  } catch (error) {
+    console.error("Unable to read guest sessions from this device.", error);
+    showToast("Không thể đọc lịch sử lưu trên thiết bị này.");
+    return [];
+  }
+}
+
+function renderSessions() {
+  const query = elements.sessionSearch.value.trim().toLocaleLowerCase("vi");
+  const filtered = [...sessions]
+    .sort((first, second) =>
+      Date.parse(second.updated_at) - Date.parse(first.updated_at)
+    )
+    .filter((session) => session.title.toLocaleLowerCase("vi").includes(query));
+  const fragment = document.createDocumentFragment();
+  const template = document.querySelector("#session-item-template");
+
+  for (const session of filtered) {
+    const item = template.content.firstElementChild.cloneNode(true);
+    const select = item.querySelector(".session-select");
+    const remove = item.querySelector(".session-remove");
+    select.textContent = session.title || "Cuộc trò chuyện mới";
+    select.setAttribute("aria-current", String(session.id === activeSessionId));
+    select.addEventListener("click", () => void activateSession(session.id));
+    remove.setAttribute("aria-label", `Xóa phiên ${session.title}`);
+    remove.addEventListener("click", () => void deleteSession(session.id));
+    fragment.append(item);
+  }
+
+  elements.sessionList.replaceChildren(fragment);
+  const noMatches = query.length > 0 && filtered.length === 0;
+  elements.sessionEmpty.hidden = filtered.length > 0;
+  elements.sessionEmpty.textContent = noMatches
+    ? "Không tìm thấy phiên phù hợp."
+    : "Các câu hỏi của bạn sẽ được nhóm theo phiên tại đây.";
+}
+
+function currentSession() {
+  return sessions.find((session) => session.id === activeSessionId) ?? null;
+}
+
+function storeActiveSessionId() {
+  const key = activeUserId
+    ? `findata-active-session:${activeUserId}`
+    : "findata-active-guest-session";
+  try {
+    localStorage.setItem(key, activeSessionId ?? "");
+  } catch (error) {
+    console.error("Unable to remember the active chat session.", error);
+  }
+}
+
+async function activateSession(sessionId) {
+  const session = sessions.find((item) => item.id === sessionId);
+  if (!session) return;
+  const requestId = ++sessionRequestId;
+  activeSessionId = session.id;
+  storeActiveSessionId();
+  renderSessions();
+
+  if (activeUserId) {
+    elements.conversation.setAttribute("aria-busy", "true");
+    try {
+      const result = await invoke("history", { sessionId });
+      if (requestId !== sessionRequestId || activeSessionId !== sessionId) return;
+      session.messages = result.messages ?? [];
+      renderHistory(result.messages ?? []);
+    } catch (error) {
+      if (requestId === sessionRequestId) showToast(error.message);
+    } finally {
+      if (requestId === sessionRequestId) {
+        elements.conversation.removeAttribute("aria-busy");
+      }
+    }
+  } else {
+    renderHistory(session.messages);
+  }
+}
+
+async function createSession() {
+  if (activeUserId) {
+    const ownerId = activeUserId;
+    const result = await invoke("create-session");
+    if (activeUserId !== ownerId) return;
+    sessions.unshift({ ...result.session, messages: [] });
+  } else {
+    sessions.unshift(makeSession());
+    if (sessions.length > 100) sessions.length = 100;
+    saveGuestSessions();
+  }
+  await activateSession(sessions[0].id);
+  elements.question.focus();
+}
+
+async function deleteSession(sessionId) {
+  const session = sessions.find((item) => item.id === sessionId);
+  if (!session || !window.confirm(`Xóa phiên "${session.title}" và toàn bộ tin nhắn?`)) {
+    return;
+  }
+
+  if (activeUserId) {
+    const ownerId = activeUserId;
+    try {
+      await invoke("delete-session", { sessionId });
+      if (activeUserId !== ownerId) return;
+    } catch (error) {
+      showToast(error.message);
+      return;
+    }
+  }
+
+  sessions = sessions.filter((item) => item.id !== sessionId);
+  if (!activeUserId) {
+    guestSessions = sessions;
+    saveGuestSessions();
+  }
+  if (activeSessionId === sessionId) {
+    activeSessionId = sessions[0]?.id ?? null;
+    if (activeSessionId) {
+      await activateSession(activeSessionId);
+    } else {
+      renderHistory([]);
+      await createSession();
+    }
+  } else {
+    renderSessions();
+  }
+}
+
+function renderHistoricalChart(data) {
+  const points = data.points.filter((point) =>
+    Number.isFinite(point.timestamp) &&
+    Number.isFinite(point.close) &&
+    point.close >= 0
+  );
+  if (points.length < 2) {
+    throw new Error("Nguồn dữ liệu chưa có đủ điểm giá để vẽ biểu đồ.");
+  }
+
+  const width = 800;
+  const height = 300;
+  const padding = { top: 18, right: 16, bottom: 38, left: 75 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const values = points.map((point) => point.close);
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  const spread = maximum - minimum || Math.max(Math.abs(maximum) * 0.02, 1);
+  const low = Math.max(0, minimum - spread * 0.08);
+  const high = maximum + spread * 0.08;
+  const firstTimestamp = points[0].timestamp;
+  const lastTimestamp = points.at(-1).timestamp;
+  const coordinates = points.map((point) => ({
+    x: padding.left + ((point.timestamp - firstTimestamp) / (lastTimestamp - firstTimestamp || 1)) * plotWidth,
+    y: padding.top + ((high - point.close) / (high - low)) * plotHeight,
+  }));
+  const trendUp = points.at(-1).close >= points[0].close;
+  const lineColor = trendUp ? "var(--aqua)" : "#ff9188";
+  const linePath = coordinates
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+    .join(" ");
+  const areaPath = `${linePath} L${coordinates.at(-1).x},${padding.top + plotHeight} L${coordinates[0].x},${padding.top + plotHeight} Z`;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("role", "img");
+  svg.setAttribute(
+    "aria-label",
+    `${data.name} (${data.symbol}), lịch sử giá đóng cửa ${data.rangeLabel}, ${points.length} điểm dữ liệu`,
+  );
+
+  for (let index = 0; index < 4; index += 1) {
+    const ratio = index / 3;
+    const y = padding.top + ratio * plotHeight;
+    const value = high - ratio * (high - low);
+    const grid = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    grid.setAttribute("x1", String(padding.left));
+    grid.setAttribute("x2", String(width - padding.right));
+    grid.setAttribute("y1", String(y));
+    grid.setAttribute("y2", String(y));
+    grid.setAttribute("class", "history-gridline");
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", String(padding.left - 10));
+    label.setAttribute("y", String(y + 4));
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("class", "history-axis-label");
+    label.textContent = formatNumber(value, { maximumFractionDigits: 0 });
+    svg.append(grid, label);
+  }
+
+  const area = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  area.setAttribute("d", areaPath);
+  area.setAttribute("class", "history-area");
+  area.style.setProperty("--chart-line", lineColor);
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  line.setAttribute("d", linePath);
+  line.setAttribute("class", "history-line");
+  line.style.setProperty("--chart-line", lineColor);
+  svg.append(area, line);
+
+  for (const index of [0, Math.floor((points.length - 1) / 2), points.length - 1]) {
+    const point = points[index];
+    const coordinate = coordinates[index];
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", String(coordinate.x));
+    label.setAttribute("y", String(height - 11));
+    label.setAttribute("text-anchor", index === 0 ? "start" : index === points.length - 1 ? "end" : "middle");
+    label.setAttribute("class", "history-axis-label");
+    label.textContent = new Intl.DateTimeFormat("vi-VN", {
+      month: "short",
+      year: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh",
+    }).format(new Date(point.timestamp));
+    svg.append(label);
+  }
+
+  const latest = points.at(-1);
+  const start = points[0];
+  const change = data.periodChangePercent;
+  const changeText = Number.isFinite(change)
+    ? `${change > 0 ? "+" : ""}${formatNumber(change, { maximumFractionDigits: 2 })}%`
+    : "—";
+  const volumeText = latest.volume == null
+    ? ""
+    : ` · KL phiên ${formatNumber(latest.volume, { maximumFractionDigits: 0 })}`;
+  elements.chartSummary.textContent =
+    `${data.name} (${data.symbol}) · ${formatNumber(latest.close, { maximumFractionDigits: 2 })} ${data.currency}` +
+    ` · ${changeText} trong ${data.rangeLabel} · ${points.length} phiên${volumeText}`;
+  elements.chartSummary.dataset.direction = change > 0 ? "up" : change < 0 ? "down" : "flat";
+  elements.historyChart.replaceChildren(svg);
+  elements.chartStatus.textContent =
+    `Từ ${formatMarketTime(start.timestamp)} đến ${formatMarketTime(latest.timestamp)} · cập nhật ${formatMarketTime(data.asOf)} · Nguồn: Yahoo Finance`;
+}
+
+async function loadHistoricalChart() {
+  const requestId = ++chartRequestId;
+  const symbol = elements.chartSymbol.value;
+  elements.refreshChart.disabled = true;
+  elements.chartStatus.textContent = "Đang tải dữ liệu lịch sử giá…";
+  elements.historyChart.setAttribute("aria-busy", "true");
+  try {
+  const data = await invoke("chart", { symbol, range: chartRange });
+  if (requestId === chartRequestId) renderHistoricalChart(data);
+  } catch (error) {
+  if (requestId === chartRequestId) {
+    elements.chartSummary.textContent = "Chưa thể hiển thị dữ liệu.";
+    elements.chartStatus.textContent = error.message;
+    elements.historyChart.replaceChildren();
+    }
+  } finally {
+    if (requestId === chartRequestId) {
+      elements.refreshChart.disabled = false;
+      elements.historyChart.removeAttribute("aria-busy");
+    }
+  }
+}
+
 function formatNumber(value, options = {}) {
   return new Intl.NumberFormat("vi-VN", options).format(value);
 }
@@ -350,7 +718,14 @@ async function invoke(action, values = {}) {
     body: { action, ...values },
   });
   if (error) {
-    throw new Error(error.message || "Không thể kết nối Supabase.");
+    let message = "Không thể kết nối đến dịch vụ. Vui lòng thử lại sau.";
+    if (error.context instanceof Response) {
+      const body = await error.context.clone().json().catch(() => null);
+      message = typeof body?.error === "string"
+        ? body.error
+        : "Dịch vụ chưa thể xử lý yêu cầu. Vui lòng thử lại sau.";
+    }
+    throw new Error(message);
   }
   if (data?.error) {
     throw new Error(data.error);
@@ -377,16 +752,7 @@ async function loadMarketData() {
   }
 }
 
-async function loadHistory() {
-  try {
-    const data = await invoke("history");
-    renderHistory(data.messages ?? []);
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-function showSignedIn(session) {
+async function showSignedIn(session) {
   const signedIn = Boolean(session?.user);
   const userId = signedIn ? session.user.id : null;
   elements.chatPanel.hidden = false;
@@ -398,40 +764,140 @@ function showSignedIn(session) {
     ? session.user.email ?? "ĐÃ ĐĂNG NHẬP"
     : "DÙNG THỬ · KHÔNG CẦN ĐĂNG NHẬP";
   document.querySelector("#chat-subtitle").textContent = signedIn
-    ? "Lịch sử trò chuyện được lưu riêng trong tài khoản của bạn."
-    : "Phiên khách · Hội thoại không được lưu sau khi đóng trang.";
+    ? "Phiên trò chuyện được đồng bộ riêng tư trong tài khoản của bạn."
+    : "Phiên khách · Hội thoại được lưu cục bộ trên thiết bị này.";
 
-  if (userId && userId !== activeUserId) {
-    activeUserId = userId;
-    setTimeout(() => loadHistory(), 0);
-  } else if (!userId && activeUserId) {
-    activeUserId = null;
-    renderHistory([]);
+  if (
+    userId === activeUserId &&
+    (activeSessionId || sessionInitializationInProgress)
+  ) return;
+  const transitionId = ++authTransitionId;
+  activeUserId = userId;
+  sessions = [];
+  activeSessionId = null;
+
+  if (userId) {
+    sessionInitializationInProgress = true;
+    try {
+      const result = await invoke("sessions");
+      if (transitionId !== authTransitionId) return;
+      sessions = (result.sessions ?? []).map((item) => ({ ...item, messages: [] }));
+      const rememberedId = readStoredValue(`findata-active-session:${userId}`);
+      renderSessions();
+      if (!sessions.length) {
+        await createSession();
+        return;
+      }
+      await activateSession(
+        sessions.some((item) => item.id === rememberedId)
+          ? rememberedId
+          : sessions[0].id,
+      );
+    } catch (error) {
+      if (transitionId === authTransitionId) showToast(error.message);
+    } finally {
+      if (transitionId === authTransitionId) {
+        sessionInitializationInProgress = false;
+      }
+    }
+    return;
   }
+
+  guestSessions = readGuestSessions();
+  sessions = guestSessions;
+  const rememberedId = readStoredValue("findata-active-guest-session");
+  if (!sessions.length) {
+    sessions = [makeSession()];
+    guestSessions = sessions;
+  }
+  if (!sessions.some((item) => item.id === rememberedId)) {
+    activeSessionId = sessions[0].id;
+  } else {
+    activeSessionId = rememberedId;
+  }
+  saveGuestSessions();
+  storeActiveSessionId();
+  renderSessions();
+  renderHistory(currentSession()?.messages ?? []);
 }
 
 async function sendQuestion(question) {
-  if (!question.trim()) return;
+  if (sending || !question.trim()) return;
 
+  if (!currentSession()) {
+    try {
+      await createSession();
+    } catch (error) {
+      showToast(error.message);
+      return;
+    }
+  }
+  const session = currentSession();
+  if (!session) return;
+  const requestUserId = activeUserId;
+  const cleanQuestion = question.trim();
+  const now = new Date().toISOString();
+  session.messages ??= [];
+  session.messages.push({
+    role: "user",
+    content: cleanQuestion,
+    metadata: {},
+    created_at: now,
+  });
+  if (session.messages.length > 200) {
+    session.messages.splice(0, session.messages.length - 200);
+  }
+  if (session.title === "Cuộc trò chuyện mới") {
+    session.title = Array.from(cleanQuestion.replace(/\s+/g, " "))
+      .slice(0, 75)
+      .join("");
+  }
+  session.updated_at = now;
+  renderSessions();
+  if (!activeUserId) saveGuestSessions();
   renderMessage("user", question);
   elements.question.value = "";
+  sending = true;
   setBusy(elements.sendButton, true, "Đang trả lời…", "Gửi câu hỏi");
 
   try {
-    const result = await invoke("ask", { question });
-    renderMessage("assistant", result.answer, {
+    const result = await invoke("ask", {
+      question: cleanQuestion,
+      sessionId: session.id,
+    });
+    const metadata = {
       intent: result.intent,
       provider: result.provider,
       citations: result.citations,
       chart: result.chart,
+    };
+    session.messages.push({
+      role: "assistant",
+      content: result.answer,
+      metadata,
+      created_at: new Date().toISOString(),
     });
+    if (session.messages.length > 200) {
+      session.messages.splice(0, session.messages.length - 200);
+    }
+    session.updated_at = new Date().toISOString();
+    if (!requestUserId) saveGuestSessions();
+    renderSessions();
+    if (activeSessionId === session.id) {
+      renderMessage("assistant", result.answer, {
+        ...metadata,
+      });
+    }
   } catch (error) {
     showToast(error.message);
-    renderMessage(
-      "assistant",
-      "Không thể hoàn tất yêu cầu. Vui lòng thử lại sau.",
-    );
+    if (activeSessionId === session.id) {
+      renderMessage(
+        "assistant",
+        "Không thể hoàn tất yêu cầu. Vui lòng thử lại sau.",
+      );
+    }
   } finally {
+    sending = false;
     setBusy(elements.sendButton, false, "Đang trả lời…", "Gửi câu hỏi");
     elements.question.focus();
   }
@@ -497,10 +963,30 @@ async function initializeApp() {
     }
   });
 
-  document.querySelectorAll("[data-question]").forEach((button) => {
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-question]");
+    if (!button) return;
+    elements.question.value = button.dataset.question;
+    elements.question.focus();
+  });
+
+  elements.newSession.addEventListener("click", async () => {
+    try {
+      await createSession();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+  elements.sessionSearch.addEventListener("input", renderSessions);
+  elements.chartSymbol.addEventListener("change", loadHistoricalChart);
+  elements.refreshChart.addEventListener("click", loadHistoricalChart);
+  document.querySelectorAll("[data-chart-range]").forEach((button) => {
     button.addEventListener("click", () => {
-      elements.question.value = button.dataset.question;
-      elements.question.focus();
+      chartRange = button.dataset.chartRange;
+      document.querySelectorAll("[data-chart-range]").forEach((tab) => {
+        tab.setAttribute("aria-pressed", String(tab === button));
+      });
+      void loadHistoricalChart();
     });
   });
 
@@ -511,7 +997,7 @@ async function initializeApp() {
 
   elements.refreshMarket.addEventListener("click", loadMarketData);
   supabase.auth.onAuthStateChange((event, session) => {
-    showSignedIn(session);
+    void showSignedIn(session);
     if (event === "SIGNED_IN") setAuthMessage("");
   });
   supabase.auth.getSession().then(({ data, error }) => {
@@ -519,9 +1005,9 @@ async function initializeApp() {
       showToast(error.message);
       return;
     }
-    showSignedIn(data.session);
+    void showSignedIn(data.session);
   });
-  await loadMarketData();
+  await Promise.all([loadMarketData(), loadHistoricalChart()]);
 }
 
 initializeApp();

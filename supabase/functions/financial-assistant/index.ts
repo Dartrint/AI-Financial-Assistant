@@ -42,8 +42,26 @@ type MarketChart = {
   asOf: number | null;
 };
 
+type HistoricalPoint = {
+  timestamp: number;
+  close: number;
+  volume: number | null;
+};
+
+const chartPeriods = {
+  "1mo": { interval: "1d", label: "1 tháng" },
+  "3mo": { interval: "1d", label: "3 tháng" },
+  "6mo": { interval: "1d", label: "6 tháng" },
+  "1y": { interval: "1d", label: "1 năm" },
+  "5y": { interval: "1wk", label: "5 năm" },
+} as const;
+
 let marketCache: { expiresAt: number; quotes: MarketQuote[]; unavailableSymbols: string[] } | null = null;
 let marketRequest: Promise<{ quotes: MarketQuote[]; unavailableSymbols: string[] }> | null = null;
+const historicalChartCache = new Map<
+  string,
+  { expiresAt: number; data: { points: HistoricalPoint[]; name: string; currency: string } }
+>();
 const guestRequests = new Map<string, number[]>();
 const GUEST_REQUEST_LIMIT = 5;
 const GUEST_WINDOW_MS = 60_000;
@@ -194,22 +212,93 @@ async function getMarketSnapshot() {
   }
 }
 
-function allowGuestRequest(request: Request): boolean {
+async function fetchHistoricalChart(symbol: string, range: keyof typeof chartPeriods) {
+  const cacheKey = `${symbol}:${range}`;
+  const cached = historicalChartCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
+  const url = new URL(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.VN`,
+  );
+  url.searchParams.set("range", range);
+  url.searchParams.set("interval", chartPeriods[range].interval);
+
+  const response = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 Findata financial assistant" },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Historical market provider returned HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const result = payload?.chart?.result?.[0];
+  const timestamps = result?.timestamp;
+  const quote = result?.indicators?.quote?.[0];
+  if (!Array.isArray(timestamps) || !Array.isArray(quote?.close)) {
+    throw new Error("Historical market provider returned no price series");
+  }
+
+  const points: HistoricalPoint[] = [];
+  for (let index = 0; index < timestamps.length; index += 1) {
+    const timestamp = timestamps[index];
+    const close = quote.close[index];
+    if (
+      typeof timestamp === "number" &&
+      Number.isFinite(timestamp) &&
+      typeof close === "number" &&
+      Number.isFinite(close) &&
+      close >= 0
+    ) {
+      const volume = quote.volume?.[index];
+      points.push({
+        timestamp: timestamp * 1000,
+        close,
+        volume: typeof volume === "number" && Number.isFinite(volume) && volume >= 0
+          ? volume
+          : null,
+      });
+    }
+  }
+  if (!points.length) {
+    throw new Error("Historical market provider returned no valid price points");
+  }
+
+  const data = {
+    points,
+    name: result.meta?.longName ?? result.meta?.shortName ?? symbol,
+    currency: result.meta?.currency ?? "VND",
+  };
+  historicalChartCache.set(cacheKey, {
+    expiresAt: Date.now() + 5 * 60_000,
+    data,
+  });
+  if (historicalChartCache.size > 100) {
+    for (const [key, value] of historicalChartCache) {
+      if (value.expiresAt <= Date.now()) historicalChartCache.delete(key);
+      if (historicalChartCache.size <= 80) break;
+    }
+  }
+  return data;
+}
+
+function allowGuestRequest(request: Request, limit = GUEST_REQUEST_LIMIT): boolean {
   const forwardedFor = request.headers.get("x-forwarded-for");
   const clientIp = request.headers.get("cf-connecting-ip") ??
     forwardedFor?.split(",")[0]?.trim() ??
     "unknown";
+  const bucketKey = `${limit}:${clientIp}`;
   const now = Date.now();
-  const recentRequests = (guestRequests.get(clientIp) ?? [])
+  const recentRequests = (guestRequests.get(bucketKey) ?? [])
     .filter((timestamp) => now - timestamp < GUEST_WINDOW_MS);
 
-  if (recentRequests.length >= GUEST_REQUEST_LIMIT) {
-    guestRequests.set(clientIp, recentRequests);
+  if (recentRequests.length >= limit) {
+    guestRequests.set(bucketKey, recentRequests);
     return false;
   }
 
   recentRequests.push(now);
-  guestRequests.set(clientIp, recentRequests);
+  guestRequests.set(bucketKey, recentRequests);
   if (guestRequests.size > 10_000) {
     for (const [ip, timestamps] of guestRequests) {
       if (!timestamps.some((timestamp) => now - timestamp < GUEST_WINDOW_MS)) {
@@ -446,25 +535,152 @@ export default {
     ) {
       return json({ error: "Nội dung yêu cầu phải là một object JSON." }, 400);
     }
-    const body = payload as { action?: unknown; question?: unknown };
+    const body = payload as {
+      action?: unknown;
+      question?: unknown;
+      sessionId?: unknown;
+      symbol?: unknown;
+      range?: unknown;
+    };
 
     const userId = ctx.authMode === "user" ? ctx.userClaims?.id ?? null : null;
+
+    if (body.action === "sessions") {
+      if (!userId) {
+        return json({ error: "Đăng nhập để đồng bộ các phiên trò chuyện." }, 401);
+      }
+      const { data, error } = await ctx.supabase
+        .from("chat_sessions")
+        .select("id, title, created_at, updated_at")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      if (error) {
+        console.error(`Chat sessions read failed: ${error.code ?? "unknown"}`);
+        return json({ error: "Không thể tải danh sách phiên trò chuyện." }, 500);
+      }
+      return json({ sessions: data ?? [] });
+    }
+
+    if (body.action === "create-session") {
+      if (!userId) {
+        return json({ error: "Đăng nhập để đồng bộ các phiên trò chuyện." }, 401);
+      }
+      const { data, error } = await ctx.supabase
+        .from("chat_sessions")
+        .insert({ user_id: userId })
+        .select("id, title, created_at, updated_at")
+        .single();
+      if (error || !data) {
+        console.error(`Chat session creation failed: ${error?.code ?? "unknown"}`);
+        return json({ error: "Không thể tạo phiên trò chuyện mới." }, 500);
+      }
+      return json({ session: data });
+    }
+
+    if (body.action === "delete-session") {
+      if (!userId) {
+        return json({ error: "Đăng nhập để quản lý phiên trò chuyện." }, 401);
+      }
+      if (
+        typeof body.sessionId !== "string" ||
+        !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
+          .test(body.sessionId)
+      ) {
+        return json({ error: "Mã phiên trò chuyện không hợp lệ." }, 400);
+      }
+      const { data, error } = await ctx.supabase
+        .from("chat_sessions")
+        .delete()
+        .eq("id", body.sessionId)
+        .eq("user_id", userId)
+        .select("id")
+        .maybeSingle();
+      if (error) {
+        console.error(`Chat session deletion failed: ${error.code ?? "unknown"}`);
+        return json({ error: "Không thể xóa phiên trò chuyện." }, 500);
+      }
+      if (!data) {
+        return json({ error: "Không tìm thấy phiên trò chuyện." }, 404);
+      }
+      return json({ deleted: data.id });
+    }
 
     if (body.action === "history") {
       if (!userId) {
         return json({ error: "Đăng nhập để xem lịch sử trò chuyện." }, 401);
       }
+      if (
+        typeof body.sessionId !== "string" ||
+        !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
+          .test(body.sessionId)
+      ) {
+        return json({ error: "Mã phiên trò chuyện không hợp lệ." }, 400);
+      }
       const { data, error } = await ctx.supabase
         .from("chat_messages")
         .select("id, role, content, metadata, created_at")
         .eq("user_id", userId)
+        .eq("session_id", body.sessionId)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
       if (error) {
         console.error(`Chat history read failed: ${error.code ?? "unknown"}`);
         return json({ error: "Không thể tải lịch sử trò chuyện." }, 500);
       }
       return json({ messages: (data ?? []).reverse() });
+    }
+
+    if (body.action === "chart") {
+      if (
+        typeof body.symbol !== "string" ||
+        !supportedSymbols.includes(body.symbol)
+      ) {
+        return json({ error: "Mã cổ phiếu chưa có trong danh sách hỗ trợ." }, 400);
+      }
+      if (
+        typeof body.range !== "string" ||
+        !Object.hasOwn(chartPeriods, body.range)
+      ) {
+        return json({ error: "Khoảng thời gian biểu đồ không hợp lệ." }, 400);
+      }
+      if (!allowGuestRequest(request, 15)) {
+        return json(
+          { error: "Bạn đã xem quá nhiều biểu đồ. Vui lòng thử lại sau một phút." },
+          429,
+        );
+      }
+      try {
+        const range = body.range as keyof typeof chartPeriods;
+        const history = await fetchHistoricalChart(body.symbol, range);
+        const first = history.points[0];
+        const latest = history.points.at(-1)!;
+        const changePercent = first.close
+          ? ((latest.close - first.close) / first.close) * 100
+          : null;
+        return json({
+          symbol: body.symbol,
+          name: history.name,
+          currency: history.currency,
+          range,
+          rangeLabel: chartPeriods[range].label,
+          points: history.points,
+          periodChangePercent: changePercent,
+          asOf: latest.timestamp,
+          source: "Yahoo Finance",
+          sourceUrl: `https://finance.yahoo.com/quote/${body.symbol}.VN/history/`,
+        });
+      } catch (error) {
+        console.error(
+          error instanceof Error
+            ? `Historical chart request failed for ${body.symbol}: ${error.message}`
+            : `Historical chart request failed for ${body.symbol}`,
+        );
+        return json(
+          { error: "Không tải được lịch sử giá từ nguồn dữ liệu. Hãy thử lại sau." },
+          502,
+        );
+      }
     }
 
     if (body.action === "market") {
@@ -493,6 +709,32 @@ export default {
     const question = body.question.trim();
     if (!question || question.length > 2000) {
       return json({ error: "Câu hỏi phải có từ 1 đến 2000 ký tự." }, 400);
+    }
+
+    if (
+      typeof body.sessionId !== "string" ||
+      !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
+        .test(body.sessionId)
+    ) {
+      return json({ error: "Mã phiên trò chuyện không hợp lệ." }, 400);
+    }
+    const sessionId = body.sessionId;
+    let currentSessionTitle: string | null = null;
+    if (userId) {
+      const { data: session, error: sessionError } = await ctx.supabase
+        .from("chat_sessions")
+        .select("id, title")
+        .eq("id", sessionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (sessionError) {
+        console.error(`Chat session check failed: ${sessionError.code ?? "unknown"}`);
+        return json({ error: "Không thể xác minh phiên trò chuyện." }, 500);
+      }
+      if (!session) {
+        return json({ error: "Phiên trò chuyện không tồn tại hoặc không thuộc tài khoản." }, 404);
+      }
+      currentSessionTitle = session.title;
     }
 
     if (userId) {
@@ -528,6 +770,7 @@ export default {
       ) => {
         const { error } = await ctx.supabase.from("chat_messages").insert({
           user_id: userId,
+          session_id: sessionId,
           role,
           content,
           metadata,
@@ -537,7 +780,26 @@ export default {
           throw new Error("Không thể lưu lịch sử trò chuyện.");
         }
       };
-      if (userId) await insertMessage("user", question, {});
+      if (userId) {
+        await insertMessage("user", question, {});
+        const normalizedTitle = Array.from(question.replace(/\s+/g, " ").trim())
+          .slice(0, 75)
+          .join("");
+        const { error: updateError } = await ctx.supabase
+          .from("chat_sessions")
+          .update({
+            title: currentSessionTitle === "Cuộc trò chuyện mới"
+              ? normalizedTitle
+              : currentSessionTitle,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", sessionId)
+          .eq("user_id", userId);
+        if (updateError) {
+          console.error(`Chat session update failed: ${updateError.code ?? "unknown"}`);
+          return json({ error: "Không thể cập nhật phiên trò chuyện." }, 500);
+        }
+      }
 
       let result: { answer: string; provider: string; chart?: MarketChart };
       let intent: string;
@@ -548,13 +810,13 @@ export default {
           intent = "market_data_unavailable";
           result = {
             provider: "none",
-            answer: "Findata hiện chỉ có giá tham khảo cho các mã trong bảng theo dõi, chưa có chuỗi lịch sử hay dữ liệu báo cáo tài chính. Vui lòng chọn một mã đang hiển thị để xem giá gần nhất; P/E, doanh nghiệp khác và dữ liệu vĩ mô chưa được kết nối.",
+            answer: "Findata hiện hỗ trợ giá tham khảo cho các mã trong bảng theo dõi. Để xem lịch sử giá, mở mục “Diễn biến giá” và chọn mã cùng khoảng thời gian; trợ lý chat chưa phân tích chuỗi lịch sử. P/E, báo cáo doanh nghiệp và dữ liệu vĩ mô chưa được kết nối.",
           };
         } else if (!isQuoteOnlyQuestion(question)) {
           intent = "market_data_unavailable";
           result = {
             provider: "none",
-            answer: `Hiện Findata chỉ có giá gần nhất, biến động so với phiên trước và khối lượng tham khảo của ${symbol}; chưa có chuỗi lịch sử. P/E, P/B, báo cáo doanh nghiệp và định giá chưa được kết nối nên mình không thể xác nhận các số liệu đó.`,
+            answer: `Bạn có thể xem lịch sử giá ${symbol} tại mục “Diễn biến giá” bằng cách chọn mã và khoảng thời gian. Trợ lý chat hiện chỉ xác nhận giá gần nhất, biến động so với phiên trước và khối lượng tham khảo; chưa phân tích chuỗi lịch sử. P/E, P/B, báo cáo doanh nghiệp và định giá chưa được kết nối nên mình không thể xác nhận các số liệu đó.`,
           };
         } else {
           try {

@@ -93,6 +93,11 @@ npx supabase db push
 npx supabase functions deploy financial-assistant --no-verify-jwt
 ```
 
+Migration `20261011000001_create_chat_sessions.sql` tạo các phiên trò chuyện,
+chuyển lịch sử hiện có vào phiên mặc định của từng tài khoản và bật xóa phiên
+cùng toàn bộ tin nhắn. Chạy `npx supabase db push` trước khi deploy Edge
+Function phiên bản mới.
+
 The Edge Function accepts either a validated signed-in user or a guest. User
 JWT validation and per-user history access are handled by `@supabase/server`;
 guest requests cannot read or write the private chat history.
@@ -146,12 +151,18 @@ không phù hợp để build Worker này.
   thương mại trước khi mở rộng ra sản phẩm công khai.
 - Câu hỏi khái niệm được Qwen3 trên Cloudflare Workers AI trả lời bằng Markdown;
   Groq/Gemini là phương án dự phòng tùy secret. Câu hỏi về giá dùng báo giá đã
-  lấy từ Yahoo Finance. Biểu đồ so sánh chỉ dùng hai mốc phiên trước và gần nhất
-  khi nguồn có đủ dữ liệu; không phải chuỗi lịch sử. P/E, P/B, báo cáo doanh
-  nghiệp và các mã ngoài watchlist chưa được hỗ trợ.
-- Khách không cần đăng nhập; hội thoại khách chỉ ở trong trang hiện tại và
-  không được lưu. Giới hạn khách 5 câu hỏi/phút/IP là best-effort theo Edge
-  instance, không thay thế một rate limiter bền vững khi có lượng truy cập lớn.
+  lấy từ Yahoo Finance. Biểu đồ lịch sử hiển thị giá đóng cửa theo kỳ 1 tháng,
+  3 tháng, 6 tháng, 1 năm hoặc 5 năm cho các mã trong watchlist; dữ liệu 5 năm
+  lấy theo tuần, các kỳ ngắn hơn theo ngày. Nguồn có thể trễ, thiếu hoặc thay
+  đổi; chưa điều chỉnh cổ tức/chia tách.
+- Khách không cần đăng nhập; các phiên và tối đa 200 tin nhắn gần nhất mỗi
+  phiên được lưu trong local storage của trình duyệt trên thiết bị hiện tại.
+  Xóa dữ liệu trang/trình duyệt có thể xóa các phiên này. Magic-link login
+  đồng bộ các phiên riêng tư trong Supabase; khách không được truy cập lịch sử
+  tài khoản. Dùng tìm kiếm, tạo phiên mới, chuyển phiên hoặc xóa phiên trong
+  thanh bên.
+- Giới hạn khách 5 câu hỏi/phút/IP là best-effort theo Edge instance, không
+  thay thế một rate limiter bền vững khi có lượng truy cập lớn.
 - Magic-link login là tùy chọn. Khi đăng nhập, RLS trong Postgres giới hạn lịch
   sử chat cho đúng tài khoản và giới hạn tài khoản là 10 câu hỏi/phút.
 - Để chạy FastAPI đầy đủ tại local, dùng các lệnh Python ở trên. Python backend
