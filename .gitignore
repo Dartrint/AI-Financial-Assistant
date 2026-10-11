@@ -1,6 +1,7 @@
 # Environment
 .env
 .dev.vars
+node_modules/
 
 # Python
 __pycache__/

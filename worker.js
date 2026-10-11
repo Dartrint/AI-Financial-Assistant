@@ -324,7 +324,7 @@ async function apiStatus() {
   const allActive = true;
   
   return {
-    status: 'ready' if allActive else 'initializing',
+    status: allActive ? 'ready' : 'initializing',
     layers: {
       market_data: {
         name: 'Market Data Layer',
