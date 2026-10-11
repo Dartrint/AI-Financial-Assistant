@@ -73,6 +73,29 @@ uvicorn app:app --reload
 python main.py --question "P/E của FPT hiện tại là bao nhiêu?"
 ```
 
+## Deploy Cloudflare Worker
+
+Repository có hai runtime: FastAPI dùng Python và Cloudflare Worker dùng
+`worker.js`. Để deploy Worker, tạo/kết nối dự án trong **Workers & Pages >
+Workers Builds** (không dùng Pages Builds):
+
+- Root directory: thư mục gốc repository.
+- Build command: để trống.
+- Deploy command: `npm run deploy`.
+- Production branch: `master`.
+
+Cloudflare Pages Builds tự động cài các dependency trong `requirements.txt`,
+trong đó có `vnstock`; lỗi cài Python ở Pages không phải lỗi build Worker.
+Đặt runtime secrets cần thiết trong **Worker > Settings > Variables and
+Secrets** trước khi deploy.
+
+Deploy thủ công:
+
+```bash
+npm ci
+npm run deploy
+```
+
 Biến môi trường chính:
 
 - `GROQ_API_KEY`, `GROQ_MODEL` — LLM Groq; `QROQ_*` cũ vẫn tương thích.

@@ -1,5 +1,12 @@
 {
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
   "dependencies": {
     "@supabase/server": "^1.9.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.149.0"
   }
 }
