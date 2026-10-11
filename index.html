@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1012" />
+    <meta
+      name="description"
+      content="Trợ lý tài chính tiếng Việt với xác thực Supabase và câu trả lời AI có giới hạn rõ ràng."
+    />
+    <title>Findata — Trợ lý tài chính</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/" aria-label="Findata trang chủ">
+          <span class="brand-mark" aria-hidden="true">F</span>
+          <span>findata<span class="brand-period">.</span></span>
+        </a>
+
+        <div class="sidebar-label">TRỢ LÝ TÀI CHÍNH</div>
+        <p class="sidebar-copy">
+          Trao đổi về khái niệm và phương pháp phân tích tài chính.
+        </p>
+
+        <div class="sidebar-label watch-label">THEO DÕI</div>
+        <div id="ticker-list" class="ticker-list" aria-label="Mã cổ phiếu theo dõi"></div>
+
+        <div class="sidebar-note">
+          <span class="status-dot"></span>
+          <div>
+            <strong>Minh bạch dữ liệu</strong>
+            <p>Chưa kết nối nguồn giá hoặc báo cáo tài chính trực tiếp.</p>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="breadcrumb">KHÔNG GIAN LÀM VIỆC <span>/</span> HỎI ĐÁP</div>
+          <div id="account-status" class="account-status">ĐANG KẾT NỐI</div>
+        </header>
+
+        <section class="workspace">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">FINDATA · AI FINANCIAL ASSISTANT</p>
+              <h1>Phân tích rõ ràng.<br /><span>Không đoán số liệu.</span></h1>
+              <p class="heading-copy">
+                Hỏi về thuật ngữ, tỷ số và phương pháp tài chính bằng tiếng Việt.
+                Dữ liệu thị trường chỉ được trả lời khi đã có nguồn xác thực.
+              </p>
+            </div>
+            <div class="backend-card">
+              <span class="card-label">BACKEND</span>
+              <strong><i class="status-dot"></i> Supabase</strong>
+              <span>Auth · Edge Functions · Postgres</span>
+            </div>
+          </div>
+
+          <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
+            <div class="auth-copy">
+              <p class="eyebrow">PHIÊN CÁ NHÂN</p>
+              <h2 id="auth-title">Đăng nhập để bắt đầu</h2>
+              <p>Chúng tôi sẽ gửi liên kết đăng nhập một lần đến email của bạn.</p>
+            </div>
+            <form id="auth-form" class="auth-form">
+              <label for="email">Địa chỉ email</label>
+              <div class="auth-controls">
+                <input id="email" name="email" type="email" autocomplete="email" placeholder="ban@example.com" required />
+                <button id="auth-submit" class="button button-primary" type="submit">Gửi liên kết</button>
+              </div>
+              <p id="auth-message" class="form-message" aria-live="polite"></p>
+            </form>
+          </section>
+
+          <section id="chat-panel" class="chat-panel" hidden>
+            <div class="chat-toolbar">
+              <div>
+                <h2>Cuộc trò chuyện</h2>
+                <p id="chat-subtitle">Lịch sử được lưu riêng trong tài khoản của bạn.</p>
+              </div>
+              <button id="sign-out" class="button button-quiet" type="button">Đăng xuất</button>
+            </div>
+
+            <div class="capability-notice">
+              <span aria-hidden="true">i</span>
+              <p>
+                Bản đầu hỗ trợ giải thích khái niệm. Truy vấn giá hiện tại, P/E
+                theo mã và số liệu báo cáo sẽ được từ chối cho đến khi nguồn dữ
+                liệu thị trường được kết nối.
+              </p>
+            </div>
+
+            <div id="conversation" class="conversation" aria-live="polite">
+              <div id="welcome" class="welcome">
+                <span class="welcome-mark">F</span>
+                <h3>Bạn muốn tìm hiểu điều gì?</h3>
+                <p>Câu trả lời được tạo bởi AI và không thay thế tư vấn đầu tư.</p>
+                <div class="suggestions">
+                  <button class="suggestion" type="button" data-question="ROE là gì và được tính như thế nào?">ROE là gì?</button>
+                  <button class="suggestion" type="button" data-question="Giải thích sự khác nhau giữa P/E và P/B.">P/E và P/B</button>
+                  <button class="suggestion" type="button" data-question="Nhà đầu tư nên đọc báo cáo lưu chuyển tiền tệ như thế nào?">Đọc báo cáo lưu chuyển tiền tệ</button>
+                </div>
+              </div>
+            </div>
+
+            <form id="chat-form" class="composer">
+              <label class="visually-hidden" for="question">Câu hỏi tài chính</label>
+              <textarea id="question" rows="2" maxlength="2000" placeholder="Nhập câu hỏi tài chính…" required></textarea>
+              <div class="composer-footer">
+                <span>ENTER để gửi · SHIFT + ENTER xuống dòng</span>
+                <button id="send-button" class="button button-primary" type="submit">
+                  <span>Gửi câu hỏi</span>
+                  <span aria-hidden="true">↗</span>
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

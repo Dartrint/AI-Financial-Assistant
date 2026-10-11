@@ -2,6 +2,8 @@
 .env
 .dev.vars
 node_modules/
+dist/
+.wrangler/
 
 # Python
 __pycache__/
@@ -19,6 +21,7 @@ qdrant_data/
 .vscode/
 .agents/
 .deepeval/
+supabase/.temp/
 
 # OS
 .DS_Store

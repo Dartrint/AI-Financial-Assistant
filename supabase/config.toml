@@ -1,0 +1,4 @@
+project_id = "ai-financial-assistant"
+
+[functions.financial-assistant]
+verify_jwt = true

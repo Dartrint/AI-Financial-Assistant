@@ -73,30 +73,73 @@ uvicorn app:app --reload
 python main.py --question "P/E của FPT hiện tại là bao nhiêu?"
 ```
 
-## Deploy Cloudflare Worker
+## Deploy Cloudflare frontend + Supabase backend
 
-Repository có hai runtime: FastAPI dùng Python và Cloudflare Worker dùng
-`worker.js`. Để deploy Worker, tạo/kết nối dự án trong **Workers & Pages >
-Workers Builds** (không dùng Pages Builds):
+Ứng dụng web production dùng Cloudflare Workers Static Assets cho frontend và
+Supabase Auth, Edge Functions, Postgres cho backend. FastAPI/Python vẫn dùng
+được khi chạy riêng, nhưng không phải backend của bản Edge MVP này.
 
-- Root directory: thư mục gốc repository.
-- Build command: để trống.
-- Deploy command: `npm run deploy`.
-- Production branch: `master`.
+### 1. Tạo Supabase backend
 
-Cloudflare Pages Builds tự động cài các dependency trong `requirements.txt`,
-trong đó có `vnstock`; lỗi cài Python ở Pages không phải lỗi build Worker.
-Đặt runtime secrets cần thiết trong **Worker > Settings > Variables and
-Secrets** trước khi deploy.
+Project Supabase hiện tại được cấu hình trong `wrangler.toml`. Đăng nhập Supabase
+CLI, liên kết project và áp dụng schema:
 
-Deploy thủ công:
+```bash
+npx supabase login
+npx supabase link --project-ref ownfdfumbymfqfacyhfw
+npx supabase db push
+npx supabase functions deploy financial-assistant
+```
+
+Trong **Supabase Dashboard > Edge Functions > Secrets**, thêm ít nhất một khóa
+LLM: `GROQ_API_KEY` hoặc `GEMINI_API_KEY`. Có thể đặt thêm `GROQ_MODEL` và
+`GEMINI_MODEL`; function dùng model mặc định nếu bỏ trống. Không đặt
+`SUPABASE_SECRET_KEY` trong frontend hoặc Cloudflare vars.
+
+Sau khi Worker có URL `workers.dev`, thêm chính xác URL đó vào **Authentication >
+URL Configuration > Redirect URLs** của Supabase để magic link quay lại ứng
+dụng.
+
+### 2. Deploy frontend lên Cloudflare Workers
+
+Đăng nhập Wrangler, bật subdomain `workers.dev` cho tài khoản nếu chưa bật, rồi
+deploy:
 
 ```bash
 npm ci
+npx wrangler login
 npm run deploy
 ```
 
-Biến môi trường chính:
+Worker được cấu hình `workers_dev = true`, nên URL sẽ có dạng
+`https://ai-financial-assistant.<account-subdomain>.workers.dev`.
+
+Để deploy tự động khi push lên GitHub, kết nối repository tại **Workers & Pages
+> Workers Builds** (không phải Pages Builds), production branch `master`, root
+directory là gốc repository, để trống Build command và đặt Deploy command thành
+`npm run deploy`. Pages Builds cài `requirements.txt` cho ứng dụng Python nên
+không phù hợp để build Worker này.
+
+### Phạm vi Edge MVP
+
+- Magic-link login qua Supabase Auth.
+- Lịch sử chat lưu trong Postgres; RLS giới hạn mỗi tài khoản chỉ đọc/ghi lịch
+  sử của chính mình.
+- Edge Function yêu cầu JWT, giới hạn 10 câu hỏi/phút/tài khoản và gọi Groq hoặc
+  Gemini cho câu hỏi khái niệm.
+- Dữ liệu giá, P/E và báo cáo doanh nghiệp chưa được kết nối vào Edge Function;
+  các câu hỏi cần số liệu sẽ bị từ chối thay vì bịa số liệu.
+- Để chạy FastAPI đầy đủ tại local, dùng các lệnh Python ở trên. Python backend
+  hiện chưa được port sang Supabase Edge Functions.
+
+Chạy frontend Worker local sau khi cài dependencies:
+
+```bash
+npm ci
+npm run dev
+```
+
+FastAPI local environment variables:
 
 - `GROQ_API_KEY`, `GROQ_MODEL` — LLM Groq; `QROQ_*` cũ vẫn tương thích.
 - `ECODATA_API_KEY`, `ECODATA_MACRO_PATH`, `ECODATA_QUOTE_PATH` — dữ liệu

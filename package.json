@@ -1,12 +1,15 @@
 {
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "build": "vite build",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
-    "@supabase/server": "^1.9.1"
+    "@supabase/server": "^1.9.1",
+    "@supabase/supabase-js": "^2.117.3"
   },
   "devDependencies": {
+    "vite": "^8.3.4",
     "wrangler": "^4.149.0"
   }
 }
