@@ -33,8 +33,9 @@ jobs:
 
       - name: Prepare architecture site
         run: |
-          mkdir -p _site
+          mkdir -p _site/docs
           cp docs/findata-architecture.html _site/index.html
+          cp docs/findata-architecture.html _site/docs/findata-architecture.html
           touch _site/.nojekyll
 
       - name: Upload Pages artifact

@@ -43,7 +43,9 @@ Supabase Edge Function xử lý dữ liệu thị trường, câu hỏi, biểu 
 tác lịch sử của tài khoản. Thư mục Python ở repository root là một ứng dụng
 FastAPI/CLI riêng, **không** phải backend của website production và không được
 Cloudflare Worker chạy. Sơ đồ tương tác được xuất bản riêng bằng GitHub Pages
-tại [dartrint.github.io/AI-Financial-Assistant](https://dartrint.github.io/AI-Financial-Assistant/);
+ở [trang chính](https://dartrint.github.io/AI-Financial-Assistant/) và đường
+dẫn tương thích
+[`/docs/findata-architecture.html`](https://dartrint.github.io/AI-Financial-Assistant/docs/findata-architecture.html);
 đây là trang tĩnh chỉ dành cho sơ đồ, không thay thế domain ứng dụng production.
 Workflow tự triển khai lại khi sơ đồ hoặc cấu hình Pages thay đổi. Nếu trang
 chưa được bật cho repository, vào **Settings → Pages**, chọn **GitHub Actions**
