@@ -1,193 +1,200 @@
-# AI Financial Assistant
+# Findata — Trợ lý tài chính
 
-Trợ lý tài chính tiếng Việt với ba đường xử lý tách biệt: dữ liệu thị trường thời gian thực, tri thức nền tảng RAG, và phân tích kết hợp. Dữ liệu thay đổi theo thị trường không được đưa vào Vector Database.
+Findata là ứng dụng web tiếng Việt giúp tra cứu giá tham khảo cổ phiếu, xem
+biểu đồ lịch sử và hỏi đáp kiến thức tài chính. Người dùng có thể dùng thử
+ngay không cần đăng nhập; đăng nhập bằng magic link là tùy chọn để đồng bộ
+phiên trò chuyện riêng tư.
 
-## Kiến trúc
+**Ứng dụng production:** [ai-financial-assistant.nhattubut.workers.dev](https://ai-financial-assistant.nhattubut.workers.dev)
 
-```mermaid
-flowchart TB
-    U[Người dùng] --> A[FinancialAgent]
-    A --> R{1. Router intent}
+> Thông tin trên ứng dụng chỉ phục vụ mục đích tham khảo và giáo dục, không
+> phải tư vấn đầu tư. Giá có thể trễ, thiếu hoặc thay đổi; hãy kiểm tra với
+> nguồn dữ liệu và đơn vị được cấp phép trước khi ra quyết định.
 
-    R -->|Khái niệm / lý thuyết| K[2A. Knowledge RAG]
-    K --> H[BM25 + BGE dense]
-    H --> RR[Reranker tùy chọn]
-    RR --> S[3. Answer synthesis]
+## Ứng dụng web production
 
-    R -->|Giá / P-E / CPI / GDP| M[2B. Market Data Tool]
-    M --> V[vnstock: giá / BCTC]
-    M --> E[EcoData: macro / quote]
-    M --> Y[Yahoo Finance: quote / valuation]
-    V --> D[(DuckDB: BCTC đã xác thực)]
-    D --> S
-    V --> S
-    E --> S
-    Y --> S
-
-    R -->|Đánh giá dữ liệu hiện tại| C[2C. Combined flow]
-    C --> M
-    C --> K
-    M --> S
-    K --> S
-    S --> O[Câu trả lời + citations]
-```
-
-### Quy tắc định tuyến
-
-| Câu hỏi | Đường xử lý |
-| --- | --- |
-| `GDP là gì?`, `CAPM hoạt động ra sao?` | Knowledge RAG |
-| `P/E của FPT hiện tại là bao nhiêu?`, `CPI Việt Nam hiện tại?` | Market Data Tool |
-| `P/E FPT hiện tại cao hay thấp?` | Market Data Tool + RAG context |
-| `Doanh thu VNM 2024?` | Financial-statement analysis |
-
-## Cấu trúc mã nguồn
+### Kiến trúc
 
 ```text
-agent.py                 Router và 5 bước orchestration
-market_data/             Adapters vnstock, EcoData, Yahoo, DuckDB
-knowledge/               Collections, seed documents, Qdrant store
-retrieval/               BM25, BGE dense retrieval, reranker, hybrid fusion
-tools/                   Market data, concept, statement, economic, portfolio tools
-etl/                     Extract → transform → chunk → metadata → Qdrant load
-app.py                   FastAPI API và khởi tạo các layer
-main.py                  CLI dùng chung aggregator + FinancialAgent
-tests/                   Unit tests cho routing và citation
+Trình duyệt
+   ├── Cloudflare Worker: frontend tĩnh, cấu hình runtime, proxy Workers AI
+   └── Supabase Edge Function `financial-assistant`
+          ├── Supabase Auth/Postgres: tài khoản và lịch sử riêng tư (tùy chọn)
+          ├── Yahoo Finance: giá tham khảo và dữ liệu biểu đồ
+          └── Cloudflare Workers AI: tạo câu trả lời
+                └── Groq, sau đó Gemini: dự phòng nếu đã cấu hình
 ```
 
-## Luồng thực thi
+Frontend được build bằng Vite và phục vụ từ Cloudflare Workers Static Assets.
+Supabase Edge Function xử lý dữ liệu thị trường, câu hỏi, biểu đồ và các thao
+tác lịch sử của tài khoản. Thư mục Python ở repository root là một ứng dụng
+FastAPI/CLI riêng, **không** phải backend của website production và không được
+Cloudflare Worker chạy.
 
-1. `FinancialAgent.answer()` phân loại intent trước khi truy cập dữ liệu.
-2. Trích xuất ticker, năm và metric bằng parser deterministic; LLM là tùy chọn.
-3. Chọn một tool theo intent để giữ ranh giới giữa dữ liệu live và RAG.
-4. Tool trả về dữ liệu, phép tính, context và citation có cấu trúc.
-5. LLM chỉ được phép diễn đạt lại kết quả phân tích BCTC đã có số liệu; không
-   được suy đoán dữ liệu mới.
+### Tính năng và phạm vi dữ liệu
 
-## Chạy dự án
+- Bảng giá tham khảo Yahoo Finance cho 15 mã: `VCB`, `BID`, `CTG`, `VNM`,
+  `FPT`, `VIC`, `MSN`, `VJC`, `SAB`, `HPG`, `MWG`, `VRE`, `HDB`, `TCB`,
+  `VPB`.
+- Biểu đồ giá lịch sử theo các kỳ 1 tháng, 3 tháng, 6 tháng, 1 năm và 5 năm.
+  Các kỳ đến 1 năm dùng dữ liệu ngày; kỳ 5 năm dùng dữ liệu tuần. Giá lịch sử
+  chưa điều chỉnh cổ tức hoặc chia tách.
+- Hỏi đáp kiến thức tài chính bằng tiếng Việt; khi cấu hình thành công,
+  Cloudflare Workers AI với Qwen3 là nhà cung cấp chính, Groq và Gemini là
+  phương án dự phòng.
+- Dữ liệu và câu trả lời có thể không đầy đủ hoặc không cập nhật theo thời
+  gian thực. Yahoo Finance không phải cam kết feed giao dịch realtime hay
+  quyền sử dụng dữ liệu thương mại.
 
-```bash
-pip install -r requirements.txt
-uvicorn app:app --reload
-# hoặc
-python main.py --question "P/E của FPT hiện tại là bao nhiêu?"
-```
+### Phiên trò chuyện và đăng nhập
 
-## Deploy Cloudflare frontend + Supabase backend
+- Khách có thể tạo, tìm, chuyển và xóa nhiều phiên mà không đăng nhập. Phiên
+  khách được lưu trong `localStorage` trên trình duyệt hiện tại; mỗi phiên
+  giữ tối đa 200 tin nhắn. Xóa dữ liệu trình duyệt có thể làm mất lịch sử này.
+- Đăng nhập bằng magic link là tùy chọn. Tài khoản có thể đồng bộ danh sách
+  tối đa 100 phiên mỗi lần tải; lịch sử được lưu trong Supabase và giới hạn
+  theo tài khoản bằng Row Level Security (RLS). Khách không đọc hoặc ghi được
+  lịch sử tài khoản.
+- Supabase Auth phải cho phép URL Worker trong danh sách Redirect URLs.
+  Kiểm tra Site URL và Redirect URLs trong phần Authentication của Supabase
+  nếu magic link không quay lại ứng dụng.
 
-Ứng dụng web dùng Cloudflare Workers Static Assets cho frontend và Supabase
-Edge Functions cho API. Khách có thể xem giá cổ phiếu và hỏi trợ lý mà không
-cần tạo tài khoản; đăng nhập magic link chỉ là tùy chọn để lưu lịch sử chat
-riêng trong Postgres. FastAPI/Python vẫn dùng được khi chạy riêng, nhưng không
-phải backend của bản web này.
+### Giới hạn sử dụng
 
-### 1. Tạo Supabase backend
+- Khách: tối đa 5 câu hỏi/phút và 15 yêu cầu biểu đồ/phút theo IP.
+- Tài khoản: tối đa 10 câu hỏi/phút.
+- Giới hạn khách hiện dùng bộ nhớ của Edge Function và chỉ có tính best-effort
+  theo từng instance; đây chưa phải bộ giới hạn bền vững cho lưu lượng lớn.
+- Giá thị trường được cache ngắn hạn; dữ liệu lịch sử biểu đồ được cache trong
+  Edge Function. Cache không đảm bảo độ mới hay tính sẵn sàng của nguồn.
 
-Project Supabase hiện tại được cấu hình trong `wrangler.toml`. Đăng nhập Supabase
-CLI, liên kết project và áp dụng schema:
+## Phát triển và deploy website
 
-```bash
-npx supabase login
-npx supabase link --project-ref ownfdfumbymfqfacyhfw
-npx supabase db push
-npx supabase functions deploy financial-assistant --no-verify-jwt
-```
+### Yêu cầu
 
-Migration `20261011000001_create_chat_sessions.sql` tạo các phiên trò chuyện,
-chuyển lịch sử hiện có vào phiên mặc định của từng tài khoản và bật xóa phiên
-cùng toàn bộ tin nhắn. Chạy `npx supabase db push` trước khi deploy Edge
-Function phiên bản mới.
+- Node.js và npm tương thích với phiên bản Wrangler khai báo trong
+  `package.json`.
+- Tài khoản Cloudflare có Workers AI và quyền deploy Workers.
+- Tài khoản Supabase có quyền áp dụng migrations, quản lý Edge Function và
+  Auth settings.
 
-The Edge Function accepts either a validated signed-in user or a guest. User
-JWT validation and per-user history access are handled by `@supabase/server`;
-guest requests cannot read or write the private chat history.
-
-Cloudflare Workers AI với Qwen3 30B là model chính. Trong **Cloudflare Workers
-& Pages > Workers > Settings > Variables and Secrets**, đặt secret
-`AI_PROXY_SECRET` (ít nhất 32 ký tự). Trong **Supabase Dashboard > Edge
-Functions > Secrets**, đặt `CF_AI_PROXY_URL` thành URL Worker kết thúc bằng
-`/internal/ai` và đặt `CF_AI_PROXY_SECRET` cùng giá trị. Worker xác thực yêu
-cầu gọi model bằng HMAC; không đưa secret này vào frontend hoặc repository.
-Tạo một giá trị ngẫu nhiên mới cho secret, nhập cùng giá trị vào hai dashboard,
-rồi deploy lại Worker và Edge Function. Không dùng publishable key, JWT hoặc
-Supabase service-role key làm secret này.
-
-Workers AI có quota miễn phí 10.000 Neurons/ngày dùng chung trong tài khoản
-Cloudflare; khi hết quota, app thử Groq rồi Gemini nếu đã cấu hình các secret
-`GROQ_API_KEY` hoặc `GEMINI_API_KEY`. Có thể đặt `GROQ_MODEL` và
-`GEMINI_MODEL`; không cấu hình secret nào thì ứng dụng báo AI tạm thời không
-sẵn sàng. Không đặt `SUPABASE_SECRET_KEY` trong frontend hoặc Cloudflare vars.
-
-Nếu muốn bật lưu lịch sử bằng magic link, thêm URL Worker vào **Authentication >
-URL Configuration > Redirect URLs** của Supabase.
-
-### 2. Deploy frontend lên Cloudflare Workers
-
-Đăng nhập Wrangler, bật subdomain `workers.dev` cho tài khoản nếu chưa bật, rồi
-deploy:
-
-```bash
-npm ci
-npx wrangler login
-npm run deploy
-```
-
-Worker được cấu hình `workers_dev = true`, nên URL sẽ có dạng
-`https://ai-financial-assistant.<account-subdomain>.workers.dev`.
-
-Để deploy tự động khi push lên GitHub, kết nối repository tại **Workers & Pages
-> Workers Builds** (không phải Pages Builds), production branch `master`, root
-directory là gốc repository, để trống Build command và đặt Deploy command thành
-`npm run deploy`. Pages Builds cài `requirements.txt` cho ứng dụng Python nên
-không phù hợp để build Worker này.
-
-### Phạm vi ứng dụng web
-
-- Bảng giá tham khảo cho 15 mã cổ phiếu qua Yahoo Finance; API được cache trong
-  bộ nhớ Edge Function khoảng 60 giây. Thời điểm hiển thị là thời điểm dữ liệu
-  do nhà cung cấp trả về, không phải thời điểm tải trang.
-- Yahoo Finance không phải nguồn cấp dữ liệu giao dịch realtime được bảo đảm.
-  Feed có thể trễ, thiếu hoặc thay đổi; hãy xác minh quyền sử dụng/hiển thị
-  thương mại trước khi mở rộng ra sản phẩm công khai.
-- Câu hỏi khái niệm được Qwen3 trên Cloudflare Workers AI trả lời bằng Markdown;
-  Groq/Gemini là phương án dự phòng tùy secret. Câu hỏi về giá dùng báo giá đã
-  lấy từ Yahoo Finance. Biểu đồ lịch sử hiển thị giá đóng cửa theo kỳ 1 tháng,
-  3 tháng, 6 tháng, 1 năm hoặc 5 năm cho các mã trong watchlist; dữ liệu 5 năm
-  lấy theo tuần, các kỳ ngắn hơn theo ngày. Nguồn có thể trễ, thiếu hoặc thay
-  đổi; chưa điều chỉnh cổ tức/chia tách.
-- Khách không cần đăng nhập; các phiên và tối đa 200 tin nhắn gần nhất mỗi
-  phiên được lưu trong local storage của trình duyệt trên thiết bị hiện tại.
-  Xóa dữ liệu trang/trình duyệt có thể xóa các phiên này. Magic-link login
-  đồng bộ các phiên riêng tư trong Supabase; khách không được truy cập lịch sử
-  tài khoản. Dùng tìm kiếm, tạo phiên mới, chuyển phiên hoặc xóa phiên trong
-  thanh bên.
-- Giới hạn khách 5 câu hỏi/phút/IP là best-effort theo Edge instance, không
-  thay thế một rate limiter bền vững khi có lượng truy cập lớn.
-- Magic-link login là tùy chọn. Khi đăng nhập, RLS trong Postgres giới hạn lịch
-  sử chat cho đúng tài khoản và giới hạn tài khoản là 10 câu hỏi/phút.
-- Để chạy FastAPI đầy đủ tại local, dùng các lệnh Python ở trên. Python backend
-  hiện chưa được port sang Supabase Edge Functions.
-
-Chạy frontend Worker local sau khi cài dependencies:
+### Chạy frontend tại local
 
 ```bash
 npm ci
 npm run dev
 ```
 
-FastAPI local environment variables:
+Vite phục vụ frontend; các biến cấu hình public của Supabase được Worker cấp
+qua `/config.js` từ `wrangler.toml`. Để chạy các endpoint Supabase local hoặc
+thử nhà cung cấp AI dự phòng, cài và chạy Supabase CLI theo tài liệu Supabase,
+đồng thời thiết lập secrets phù hợp cho môi trường đó.
 
-- `GROQ_API_KEY`, `GROQ_MODEL` — LLM Groq; `QROQ_*` cũ vẫn tương thích.
-- `ECODATA_API_KEY`, `ECODATA_MACRO_PATH`, `ECODATA_QUOTE_PATH` — dữ liệu
-  macro/quote EcoData, tùy theo endpoint của gói dịch vụ.
-- `BGE_MODEL` — mặc định `BAAI/bge-small-en-v1.5`.
-
-## ETL tri thức
+### Build và deploy Cloudflare Worker
 
 ```bash
-python -m etl.run_etl --list
-python -m etl.run_etl --source investopedia_financial --limit 20
+npm ci
+npm run build
+npx wrangler login
+npm run deploy
 ```
 
-ETL chỉ lấy URL được cấu hình hoặc phát hiện từ sitemap; sau đó làm sạch bằng Trafilatura/BeautifulSoup, chunk 800 ký tự với overlap 150 và ghi metadata
-`topic`, `category`, `difficulty`, `source`, `updated_at` vào Qdrant.
+Các scripts `dev`, `build` và `deploy` được khai báo trong `package.json`.
+`wrangler.toml` cấu hình Worker tên `ai-financial-assistant`, thư mục static
+assets `dist`, binding Workers AI và biến public cần cho frontend. Không đưa
+secret vào `[vars]`, mã nguồn hoặc frontend.
+
+Website hiện chạy trên Workers, không phải Cloudflare Pages. Nếu kết nối GitHub
+qua Workers Builds, dùng thư mục gốc của repository, nhánh production `master`,
+để trống Build command và dùng Deploy command `npm run deploy`. Không cấu hình
+Pages Builds chạy `pip install -r requirements.txt` cho website này.
+
+### Cấu hình Workers AI và nhà cung cấp dự phòng
+
+Worker gọi Workers AI qua endpoint nội bộ `/internal/ai`; endpoint yêu cầu chữ
+ký HMAC để chỉ Edge Function được cấu hình mới gọi được.
+
+1. Tạo một secret ngẫu nhiên riêng, tối thiểu 32 ký tự.
+2. Đặt `AI_PROXY_SECRET` trong **Cloudflare Dashboard → Workers & Pages →
+   Worker → Settings → Variables and Secrets**.
+3. Đặt cùng secret đó trong **Supabase Dashboard → Edge Functions → Secrets**
+   với tên `CF_AI_PROXY_SECRET`.
+4. Trong Supabase Edge Function Secrets, đặt `CF_AI_PROXY_URL` thành URL HTTPS
+   của Worker kết thúc bằng `/internal/ai`, ví dụ
+   `https://<worker-domain>/internal/ai`.
+5. Deploy lại Worker và Edge Function sau khi cấu hình.
+
+Không gửi các secrets này cho trình duyệt, không commit chúng và không dùng
+Supabase secret/service-role key thay thế. Khi hết quota Workers AI hoặc nhà
+cung cấp chính không sẵn sàng, function thử Groq rồi Gemini nếu đã cấu hình
+`GROQ_API_KEY` hoặc `GEMINI_API_KEY`. Có thể đặt `GROQ_MODEL` và
+`GEMINI_MODEL`; khi không có nhà cung cấp hoạt động, API trả lỗi thay vì câu
+trả lời giả lập.
+
+### Cấu hình Supabase
+
+Project reference hiện dùng cho website được cấu hình trong `wrangler.toml`.
+Để liên kết CLI với project đó, đăng nhập bằng tài khoản có quyền truy cập rồi
+áp dụng migrations và deploy function:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push
+npx supabase functions deploy financial-assistant --no-verify-jwt
+```
+
+Thay `<project-ref>` bằng project reference của môi trường đang triển khai.
+`--no-verify-jwt` cần thiết vì function cho phép khách chưa đăng nhập; function
+tự xác thực JWT của tài khoản khi có. Migrations trong
+[`supabase/migrations/`](./supabase/migrations/) tạo bảng tin nhắn, bảng phiên,
+RLS và quan hệ giữa lịch sử với phiên. Phải áp dụng migrations trước khi
+deploy phiên bản function sử dụng schema đó.
+
+Các biến public `SUPABASE_URL` và `SUPABASE_PUBLISHABLE_KEY` được cấp cho
+frontend từ cấu hình Worker. Publishable key được thiết kế để dùng ở client
+với RLS; không đặt `SUPABASE_SECRET_KEY` hoặc service-role key ở frontend hay
+trong cấu hình public của Worker. Edge Function của Supabase sử dụng cơ chế
+xác thực được cung cấp bởi `@supabase/server`.
+
+## Ứng dụng Python độc lập (tùy chọn)
+
+Repository còn có FastAPI, CLI và mã ETL/RAG Python cho các thử nghiệm độc lập.
+Đây không phải luồng chạy hoặc deploy của website Cloudflare/Supabase. Cài
+các dependency Python có thể phụ thuộc vào phiên bản Python và khả năng truy
+cập package `vnstock` trong môi trường của bạn:
+
+```bash
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+uvicorn app:app --reload
+```
+
+CLI:
+
+```bash
+python main.py --question "P/E của FPT hiện tại là bao nhiêu?"
+python main.py --interactive
+```
+
+ETL có các nguồn và chế độ được hỗ trợ riêng trong mã nguồn; xem
+`python -m etl.run_etl --help` trước khi chạy vì thao tác có thể tải dữ liệu
+web và ghi vector store cục bộ.
+
+## Bảo mật và quyền riêng tư
+
+- Chỉ cấu hình credentials trong secret manager của dịch vụ tương ứng hoặc
+  file môi trường local không được commit.
+- Không gửi access token, service-role/secret key hoặc khóa nhà cung cấp AI
+  tới client.
+- Lịch sử tài khoản là dữ liệu riêng tư; phiên khách nằm trong trình duyệt
+  của người dùng và không được đồng bộ tự động.
+
+## Giấy phép và lưu ý
+
+Hãy xác minh điều khoản sử dụng của từng nguồn dữ liệu, dịch vụ AI và nội dung
+ETL trước khi phân phối hoặc sử dụng thương mại. Ứng dụng không đảm bảo tính
+chính xác, đầy đủ, kịp thời hoặc phù hợp của thông tin cho một quyết định đầu
+tư cụ thể.
