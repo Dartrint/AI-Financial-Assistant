@@ -15,21 +15,36 @@ phiên trò chuyện riêng tư.
 
 ### Kiến trúc
 
-```text
-Trình duyệt
-   ├── Cloudflare Worker: frontend tĩnh, cấu hình runtime, proxy Workers AI
-   └── Supabase Edge Function `financial-assistant`
-          ├── Supabase Auth/Postgres: tài khoản và lịch sử riêng tư (tùy chọn)
-          ├── Yahoo Finance: giá tham khảo và dữ liệu biểu đồ
-          └── Cloudflare Workers AI: tạo câu trả lời
-                └── Groq, sau đó Gemini: dự phòng nếu đã cấu hình
+```mermaid
+flowchart LR
+    subgraph production["Web production"]
+        browser["Trình duyệt<br/>Khách: localStorage"]
+        worker["Cloudflare Worker<br/>Vite assets · config.js · AI proxy"]
+        supabase["Supabase<br/>Edge Function · Auth · Postgres / RLS"]
+        yahoo["Yahoo Finance<br/>Giá tham khảo · lịch sử"]
+        workersAI["Workers AI<br/>Qwen3"]
+        fallback["Groq → Gemini<br/>Dự phòng tùy cấu hình"]
+
+        browser -->|"HTTPS · tải giao diện"| worker
+        browser -->|"API · magic link tùy chọn"| supabase
+        supabase -->|"Giá · dữ liệu lịch sử"| yahoo
+        supabase -->|"HMAC · /internal/ai"| worker
+        worker -->|"AI binding"| workersAI
+        supabase -.->|"Khi Workers AI lỗi"| fallback
+    end
+
+    subgraph local["Ứng dụng độc lập · không thuộc production"]
+        python["Python FastAPI / CLI / ETL"]
+    end
 ```
 
 Frontend được build bằng Vite và phục vụ từ Cloudflare Workers Static Assets.
 Supabase Edge Function xử lý dữ liệu thị trường, câu hỏi, biểu đồ và các thao
 tác lịch sử của tài khoản. Thư mục Python ở repository root là một ứng dụng
 FastAPI/CLI riêng, **không** phải backend của website production và không được
-Cloudflare Worker chạy.
+Cloudflare Worker chạy. [Mở sơ đồ tương tác](./docs/findata-architecture.html)
+để xem luồng web, xác thực/lịch sử, AI và ứng dụng Python riêng; nhãn sơ đồ
+dùng tiếng Việt, còn điều khiển của bản xem tương tác hiện dùng tiếng Anh.
 
 ### Tính năng và phạm vi dữ liệu
 

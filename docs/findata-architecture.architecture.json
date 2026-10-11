@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Kiến trúc tổng quan Findata",
+    "output": "findata-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "web-request",
+        "label": "Luồng ứng dụng web",
+        "focus": ["browser", "worker", "supabase", "yahoo"],
+        "note": "Trình duyệt tải giao diện và gọi API qua Supabase."
+      },
+      {
+        "id": "auth-history",
+        "label": "Đăng nhập và lịch sử",
+        "focus": ["browser", "supabase"],
+        "note": "Magic link là tùy chọn; RLS giới hạn lịch sử theo tài khoản."
+      },
+      {
+        "id": "ai",
+        "label": "Luồng AI",
+        "focus": ["supabase", "worker", "fallback-ai"],
+        "note": "Supabase gọi Workers AI qua proxy HMAC; Groq và Gemini là dự phòng."
+      },
+      {
+        "id": "python",
+        "label": "Python độc lập",
+        "focus": ["python-app"],
+        "note": "FastAPI và CLI chạy riêng, không nằm trên luồng website production."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Trình duyệt",
+      "sublabel": "Giao diện · phiên khách localStorage",
+      "pos": [35, 255],
+      "size": [195, 78]
+    },
+    {
+      "id": "worker",
+      "type": "cloud",
+      "label": "Cloudflare Worker",
+      "sublabel": "Vite assets · config.js · Workers AI proxy",
+      "pos": [345, 85],
+      "size": [220, 78]
+    },
+    {
+      "id": "supabase",
+      "type": "backend",
+      "label": "Supabase",
+      "sublabel": "Edge Function · Auth · Postgres / RLS",
+      "pos": [650, 255],
+      "size": [225, 82]
+    },
+    {
+      "id": "yahoo",
+      "type": "external",
+      "label": "Yahoo Finance",
+      "sublabel": "Báo giá tham khảo · lịch sử",
+      "pos": [970, 85],
+      "size": [190, 72]
+    },
+    {
+      "id": "fallback-ai",
+      "type": "external",
+      "label": "Groq → Gemini",
+      "sublabel": "Dự phòng nếu được cấu hình",
+      "pos": [970, 390],
+      "size": [195, 72]
+    },
+    {
+      "id": "python-app",
+      "type": "backend",
+      "label": "Python FastAPI / CLI",
+      "sublabel": "Ứng dụng độc lập · chạy local",
+      "pos": [35, 465],
+      "size": [220, 72]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-worker",
+      "from": "browser",
+      "to": "worker",
+      "label": "HTTPS · giao diện",
+      "variant": "emphasis"
+    },
+    {
+      "id": "browser-supabase",
+      "from": "browser",
+      "to": "supabase",
+      "label": "API · magic link tùy chọn",
+      "labelDy": 47
+    },
+    {
+      "id": "supabase-yahoo",
+      "from": "supabase",
+      "to": "yahoo",
+      "label": "Giá · lịch sử"
+    },
+    {
+      "id": "supabase-worker-ai",
+      "from": "supabase",
+      "to": "worker",
+      "label": "HMAC · AI proxy",
+      "variant": "security"
+    },
+    {
+      "id": "supabase-fallback-ai",
+      "from": "supabase",
+      "to": "fallback-ai",
+      "label": "Khi Workers AI lỗi",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Dùng thử không cần tài khoản",
+      "items": [
+        "Phiên khách nằm trong localStorage trên thiết bị",
+        "Khách không truy cập lịch sử tài khoản Supabase"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Dữ liệu và AI",
+      "items": [
+        "Yahoo Finance cung cấp giá tham khảo, không đảm bảo realtime",
+        "Workers AI / Qwen3 chính; Groq và Gemini dự phòng tùy cấu hình"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Python chạy riêng",
+      "items": [
+        "FastAPI, CLI và ETL là ứng dụng độc lập",
+        "Không thuộc backend website Cloudflare + Supabase"
+      ]
+    }
+  ]
+}
