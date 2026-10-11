@@ -42,9 +42,14 @@ Frontend được build bằng Vite và phục vụ từ Cloudflare Workers Stat
 Supabase Edge Function xử lý dữ liệu thị trường, câu hỏi, biểu đồ và các thao
 tác lịch sử của tài khoản. Thư mục Python ở repository root là một ứng dụng
 FastAPI/CLI riêng, **không** phải backend của website production và không được
-Cloudflare Worker chạy. [Mở sơ đồ tương tác](./docs/findata-architecture.html)
-để xem luồng web, xác thực/lịch sử, AI và ứng dụng Python riêng; nhãn sơ đồ
-dùng tiếng Việt, còn điều khiển của bản xem tương tác hiện dùng tiếng Anh.
+Cloudflare Worker chạy. Sơ đồ tương tác được xuất bản riêng bằng GitHub Pages
+tại [dartrint.github.io/AI-Financial-Assistant](https://dartrint.github.io/AI-Financial-Assistant/);
+đây là trang tĩnh chỉ dành cho sơ đồ, không thay thế domain ứng dụng production.
+Workflow tự triển khai lại khi sơ đồ hoặc cấu hình Pages thay đổi. Nếu trang
+chưa được bật cho repository, vào **Settings → Pages**, chọn **GitHub Actions**
+làm Build and deployment source. Bản xem tương tác trình bày luồng web,
+xác thực/lịch sử, AI và ứng dụng Python riêng; nhãn sơ đồ dùng tiếng Việt,
+còn điều khiển hiện dùng tiếng Anh.
 
 ### Tính năng và phạm vi dữ liệu
 
