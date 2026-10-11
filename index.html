@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0b1012" />
     <meta
       name="description"
-      content="Trợ lý tài chính tiếng Việt với xác thực Supabase và câu trả lời AI có giới hạn rõ ràng."
+      content="Theo dõi giá cổ phiếu Việt Nam và hỏi trợ lý tài chính AI bằng tiếng Việt, không cần đăng nhập."
     />
     <title>Findata — Trợ lý tài chính</title>
   </head>
@@ -20,24 +20,21 @@
 
         <div class="sidebar-label">TRỢ LÝ TÀI CHÍNH</div>
         <p class="sidebar-copy">
-          Trao đổi về khái niệm và phương pháp phân tích tài chính.
+          Theo dõi giá cổ phiếu Việt Nam và tìm hiểu tài chính cùng AI.
         </p>
-
-        <div class="sidebar-label watch-label">THEO DÕI</div>
-        <div id="ticker-list" class="ticker-list" aria-label="Mã cổ phiếu theo dõi"></div>
 
         <div class="sidebar-note">
           <span class="status-dot"></span>
           <div>
-            <strong>Minh bạch dữ liệu</strong>
-            <p>Chưa kết nối nguồn giá hoặc báo cáo tài chính trực tiếp.</p>
+            <strong>Dùng thử công khai</strong>
+            <p>Không cần đăng nhập. Hội thoại khách không được lưu.</p>
           </div>
         </div>
       </aside>
 
       <main class="main-content">
         <header class="topbar">
-          <div class="breadcrumb">KHÔNG GIAN LÀM VIỆC <span>/</span> HỎI ĐÁP</div>
+          <div class="breadcrumb">FINDATA <span>/</span> THỊ TRƯỜNG & HỎI ĐÁP</div>
           <div id="account-status" class="account-status">ĐANG KẾT NỐI</div>
         </header>
 
@@ -45,24 +42,55 @@
           <div class="page-heading">
             <div>
               <p class="eyebrow">FINDATA · AI FINANCIAL ASSISTANT</p>
-              <h1>Phân tích rõ ràng.<br /><span>Không đoán số liệu.</span></h1>
+              <h1>Thị trường trong tầm mắt.<br /><span>Hỏi đáp không cần tài khoản.</span></h1>
               <p class="heading-copy">
-                Hỏi về thuật ngữ, tỷ số và phương pháp tài chính bằng tiếng Việt.
-                Dữ liệu thị trường chỉ được trả lời khi đã có nguồn xác thực.
+                Theo dõi giá cổ phiếu Việt Nam và hỏi AI về tài chính bằng tiếng Việt.
+                Đăng nhập chỉ cần thiết nếu bạn muốn lưu lịch sử trò chuyện.
               </p>
             </div>
             <div class="backend-card">
-              <span class="card-label">BACKEND</span>
-              <strong><i class="status-dot"></i> Supabase</strong>
-              <span>Auth · Edge Functions · Postgres</span>
+              <span class="card-label">NGUỒN DỮ LIỆU</span>
+              <strong><i class="status-dot"></i> Yahoo Finance</strong>
+              <span>Giá tham khảo · có thể trễ</span>
             </div>
           </div>
 
+          <section class="market-panel" aria-labelledby="market-title">
+            <div class="section-toolbar">
+              <div>
+                <p class="eyebrow">HOSE · WATCHLIST</p>
+                <h2 id="market-title">Bảng giá cổ phiếu</h2>
+                <p id="market-updated" class="section-caption">Đang tải dữ liệu thị trường…</p>
+              </div>
+              <button id="refresh-market" class="button button-quiet" type="button">Làm mới</button>
+            </div>
+            <div class="market-table-wrap">
+              <table class="market-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Mã</th>
+                    <th scope="col">Giá gần nhất</th>
+                    <th scope="col">Thay đổi</th>
+                    <th scope="col">Khối lượng</th>
+                    <th scope="col">Thời điểm</th>
+                  </tr>
+                </thead>
+                <tbody id="market-quotes">
+                  <tr><td colspan="5" class="table-message">Đang tải bảng giá…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="market-disclaimer">
+              Nguồn: <a href="https://finance.yahoo.com/" target="_blank" rel="noreferrer">Yahoo Finance</a>.
+              Dữ liệu có thể trễ hoặc không đầy đủ; chỉ dùng tham khảo, không phải dữ liệu giao dịch hay tư vấn đầu tư.
+            </p>
+          </section>
+
           <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
             <div class="auth-copy">
-              <p class="eyebrow">PHIÊN CÁ NHÂN</p>
-              <h2 id="auth-title">Đăng nhập để bắt đầu</h2>
-              <p>Chúng tôi sẽ gửi liên kết đăng nhập một lần đến email của bạn.</p>
+              <p class="eyebrow">TÙY CHỌN</p>
+              <h2 id="auth-title">Lưu lịch sử trò chuyện</h2>
+              <p>Đăng nhập bằng liên kết gửi qua email để đồng bộ lịch sử riêng tư của bạn.</p>
             </div>
             <form id="auth-form" class="auth-form">
               <label for="email">Địa chỉ email</label>
@@ -77,18 +105,23 @@
           <section id="chat-panel" class="chat-panel" hidden>
             <div class="chat-toolbar">
               <div>
-                <h2>Cuộc trò chuyện</h2>
-                <p id="chat-subtitle">Lịch sử được lưu riêng trong tài khoản của bạn.</p>
+                <p class="eyebrow">TRỢ LÝ AI</p>
+                <h2>Hỏi về tài chính</h2>
+                <p id="chat-subtitle">Bạn đang dùng thử với tư cách khách. Hội thoại không được lưu.</p>
               </div>
-              <button id="sign-out" class="button button-quiet" type="button">Đăng xuất</button>
+              <div class="chat-actions">
+                <button id="auth-toggle" class="button button-quiet" type="button" aria-expanded="false" aria-controls="auth-panel">
+                  Đăng nhập để lưu lịch sử
+                </button>
+                <button id="sign-out" class="button button-quiet" type="button" hidden>Đăng xuất</button>
+              </div>
             </div>
 
             <div class="capability-notice">
               <span aria-hidden="true">i</span>
               <p>
-                Bản đầu hỗ trợ giải thích khái niệm. Truy vấn giá hiện tại, P/E
-                theo mã và số liệu báo cáo sẽ được từ chối cho đến khi nguồn dữ
-                liệu thị trường được kết nối.
+                AI có thể giải thích khái niệm và sử dụng giá gần nhất cho các mã trong bảng.
+                P/E, báo cáo tài chính và khuyến nghị đầu tư chưa được hỗ trợ.
               </p>
             </div>
 

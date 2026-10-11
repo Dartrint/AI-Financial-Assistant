@@ -75,9 +75,11 @@ python main.py --question "P/E của FPT hiện tại là bao nhiêu?"
 
 ## Deploy Cloudflare frontend + Supabase backend
 
-Ứng dụng web production dùng Cloudflare Workers Static Assets cho frontend và
-Supabase Auth, Edge Functions, Postgres cho backend. FastAPI/Python vẫn dùng
-được khi chạy riêng, nhưng không phải backend của bản Edge MVP này.
+Ứng dụng web dùng Cloudflare Workers Static Assets cho frontend và Supabase
+Edge Functions cho API. Khách có thể xem giá cổ phiếu và hỏi trợ lý mà không
+cần tạo tài khoản; đăng nhập magic link chỉ là tùy chọn để lưu lịch sử chat
+riêng trong Postgres. FastAPI/Python vẫn dùng được khi chạy riêng, nhưng không
+phải backend của bản web này.
 
 ### 1. Tạo Supabase backend
 
@@ -88,17 +90,20 @@ CLI, liên kết project và áp dụng schema:
 npx supabase login
 npx supabase link --project-ref ownfdfumbymfqfacyhfw
 npx supabase db push
-npx supabase functions deploy financial-assistant
+npx supabase functions deploy financial-assistant --no-verify-jwt
 ```
+
+The Edge Function accepts either a validated signed-in user or a guest. User
+JWT validation and per-user history access are handled by `@supabase/server`;
+guest requests cannot read or write the private chat history.
 
 Trong **Supabase Dashboard > Edge Functions > Secrets**, thêm ít nhất một khóa
 LLM: `GROQ_API_KEY` hoặc `GEMINI_API_KEY`. Có thể đặt thêm `GROQ_MODEL` và
 `GEMINI_MODEL`; function dùng model mặc định nếu bỏ trống. Không đặt
 `SUPABASE_SECRET_KEY` trong frontend hoặc Cloudflare vars.
 
-Sau khi Worker có URL `workers.dev`, thêm chính xác URL đó vào **Authentication >
-URL Configuration > Redirect URLs** của Supabase để magic link quay lại ứng
-dụng.
+Nếu muốn bật lưu lịch sử bằng magic link, thêm URL Worker vào **Authentication >
+URL Configuration > Redirect URLs** của Supabase.
 
 ### 2. Deploy frontend lên Cloudflare Workers
 
@@ -120,15 +125,22 @@ directory là gốc repository, để trống Build command và đặt Deploy co
 `npm run deploy`. Pages Builds cài `requirements.txt` cho ứng dụng Python nên
 không phù hợp để build Worker này.
 
-### Phạm vi Edge MVP
+### Phạm vi ứng dụng web
 
-- Magic-link login qua Supabase Auth.
-- Lịch sử chat lưu trong Postgres; RLS giới hạn mỗi tài khoản chỉ đọc/ghi lịch
-  sử của chính mình.
-- Edge Function yêu cầu JWT, giới hạn 10 câu hỏi/phút/tài khoản và gọi Groq hoặc
-  Gemini cho câu hỏi khái niệm.
-- Dữ liệu giá, P/E và báo cáo doanh nghiệp chưa được kết nối vào Edge Function;
-  các câu hỏi cần số liệu sẽ bị từ chối thay vì bịa số liệu.
+- Bảng giá tham khảo cho 15 mã cổ phiếu qua Yahoo Finance; API được cache trong
+  bộ nhớ Edge Function khoảng 60 giây. Thời điểm hiển thị là thời điểm dữ liệu
+  do nhà cung cấp trả về, không phải thời điểm tải trang.
+- Yahoo Finance không phải nguồn cấp dữ liệu giao dịch realtime được bảo đảm.
+  Feed có thể trễ, thiếu hoặc thay đổi; hãy xác minh quyền sử dụng/hiển thị
+  thương mại trước khi mở rộng ra sản phẩm công khai.
+- Câu hỏi khái niệm gọi Groq hoặc Gemini. Câu hỏi về giá được trả lời bằng báo
+  giá đã lấy từ nguồn; P/E, P/B, báo cáo doanh nghiệp và các mã ngoài watchlist
+  chưa được hỗ trợ.
+- Khách không cần đăng nhập; hội thoại khách chỉ ở trong trang hiện tại và
+  không được lưu. Giới hạn khách 5 câu hỏi/phút/IP là best-effort theo Edge
+  instance, không thay thế một rate limiter bền vững khi có lượng truy cập lớn.
+- Magic-link login là tùy chọn. Khi đăng nhập, RLS trong Postgres giới hạn lịch
+  sử chat cho đúng tài khoản và giới hạn tài khoản là 10 câu hỏi/phút.
 - Để chạy FastAPI đầy đủ tại local, dùng các lệnh Python ở trên. Python backend
   hiện chưa được port sang Supabase Edge Functions.
 
