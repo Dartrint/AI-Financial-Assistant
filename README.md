@@ -97,10 +97,21 @@ The Edge Function accepts either a validated signed-in user or a guest. User
 JWT validation and per-user history access are handled by `@supabase/server`;
 guest requests cannot read or write the private chat history.
 
-Trong **Supabase Dashboard > Edge Functions > Secrets**, thêm ít nhất một khóa
-LLM: `GROQ_API_KEY` hoặc `GEMINI_API_KEY`. Có thể đặt thêm `GROQ_MODEL` và
-`GEMINI_MODEL`; function dùng model mặc định nếu bỏ trống. Không đặt
-`SUPABASE_SECRET_KEY` trong frontend hoặc Cloudflare vars.
+Cloudflare Workers AI với Qwen3 30B là model chính. Trong **Cloudflare Workers
+& Pages > Workers > Settings > Variables and Secrets**, đặt secret
+`AI_PROXY_SECRET` (ít nhất 32 ký tự). Trong **Supabase Dashboard > Edge
+Functions > Secrets**, đặt `CF_AI_PROXY_URL` thành URL Worker kết thúc bằng
+`/internal/ai` và đặt `CF_AI_PROXY_SECRET` cùng giá trị. Worker xác thực yêu
+cầu gọi model bằng HMAC; không đưa secret này vào frontend hoặc repository.
+Tạo một giá trị ngẫu nhiên mới cho secret, nhập cùng giá trị vào hai dashboard,
+rồi deploy lại Worker và Edge Function. Không dùng publishable key, JWT hoặc
+Supabase service-role key làm secret này.
+
+Workers AI có quota miễn phí 10.000 Neurons/ngày dùng chung trong tài khoản
+Cloudflare; khi hết quota, app thử Groq rồi Gemini nếu đã cấu hình các secret
+`GROQ_API_KEY` hoặc `GEMINI_API_KEY`. Có thể đặt `GROQ_MODEL` và
+`GEMINI_MODEL`; không cấu hình secret nào thì ứng dụng báo AI tạm thời không
+sẵn sàng. Không đặt `SUPABASE_SECRET_KEY` trong frontend hoặc Cloudflare vars.
 
 Nếu muốn bật lưu lịch sử bằng magic link, thêm URL Worker vào **Authentication >
 URL Configuration > Redirect URLs** của Supabase.
@@ -133,9 +144,11 @@ không phù hợp để build Worker này.
 - Yahoo Finance không phải nguồn cấp dữ liệu giao dịch realtime được bảo đảm.
   Feed có thể trễ, thiếu hoặc thay đổi; hãy xác minh quyền sử dụng/hiển thị
   thương mại trước khi mở rộng ra sản phẩm công khai.
-- Câu hỏi khái niệm gọi Groq hoặc Gemini. Câu hỏi về giá được trả lời bằng báo
-  giá đã lấy từ nguồn; P/E, P/B, báo cáo doanh nghiệp và các mã ngoài watchlist
-  chưa được hỗ trợ.
+- Câu hỏi khái niệm được Qwen3 trên Cloudflare Workers AI trả lời bằng Markdown;
+  Groq/Gemini là phương án dự phòng tùy secret. Câu hỏi về giá dùng báo giá đã
+  lấy từ Yahoo Finance. Biểu đồ so sánh chỉ dùng hai mốc phiên trước và gần nhất
+  khi nguồn có đủ dữ liệu; không phải chuỗi lịch sử. P/E, P/B, báo cáo doanh
+  nghiệp và các mã ngoài watchlist chưa được hỗ trợ.
 - Khách không cần đăng nhập; hội thoại khách chỉ ở trong trang hiện tại và
   không được lưu. Giới hạn khách 5 câu hỏi/phút/IP là best-effort theo Edge
   instance, không thay thế một rate limiter bền vững khi có lượng truy cập lớn.

@@ -9,6 +9,9 @@ binding = "ASSETS"
 run_worker_first = true
 not_found_handling = "404-page"
 
+[ai]
+binding = "AI"
+
 [vars]
 SUPABASE_URL = "https://ownfdfumbymfqfacyhfw.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Cv3GjlsD8yb_JYx2_Oekvg_2B8IlJl6"

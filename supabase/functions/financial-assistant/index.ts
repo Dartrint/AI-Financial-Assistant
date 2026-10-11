@@ -6,8 +6,11 @@ const supportedSymbols = [
 ];
 
 const systemPrompt = [
-  "Bạn là trợ lý giáo dục tài chính, trả lời bằng tiếng Việt rõ ràng và ngắn gọn.",
-  "Giải thích khái niệm, công thức và phương pháp phân tích chung.",
+  "Bạn là trợ lý giáo dục tài chính thân thiện, trả lời bằng tiếng Việt tự nhiên và có cấu trúc Markdown dễ đọc.",
+  "Trả lời trực tiếp trước, sau đó giải thích ý nghĩa, công thức, cách áp dụng và giới hạn khi phù hợp.",
+  "Dùng tiêu đề ngắn, danh sách hoặc bảng khi giúp người đọc so sánh; giải thích thuật ngữ chuyên môn ngay lần đầu xuất hiện.",
+  "Viết công thức bằng ký hiệu văn bản dễ đọc như `ROE = lợi nhuận ròng / vốn chủ sở hữu`; không dùng cú pháp LaTeX.",
+  "Ví dụ số chỉ được dùng nếu ghi rõ là ví dụ giả định; không biến ví dụ thành dữ liệu thực tế hay khuyến nghị.",
   "Chỉ sử dụng dữ liệu giá được cung cấp trong ngữ cảnh của câu hỏi; không tự bổ sung số liệu, báo cáo hoặc ngày tháng.",
   "Nếu dữ liệu được cung cấp không đủ để kết luận, hãy nêu rõ giới hạn đó.",
   "Không đưa ra khuyến nghị mua, bán hay lời khuyên đầu tư cá nhân hóa.",
@@ -30,6 +33,15 @@ type MarketQuote = {
   sourceUrl: string;
 };
 
+type MarketChart = {
+  title: string;
+  labels: string[];
+  values: number[];
+  unit: string;
+  source: string;
+  asOf: number | null;
+};
+
 let marketCache: { expiresAt: number; quotes: MarketQuote[]; unavailableSymbols: string[] } | null = null;
 let marketRequest: Promise<{ quotes: MarketQuote[]; unavailableSymbols: string[] }> | null = null;
 const guestRequests = new Map<string, number[]>();
@@ -45,6 +57,11 @@ function getQuestionSymbol(question: string): string | null {
 
 function requiresMarketData(question: string): boolean {
   const normalized = question.normalize("NFC");
+  const asksForVisualization =
+    /biểu đồ|đồ thị|chart|diễn biến giá|lịch sử giá|xu hướng giá/i.test(normalized);
+  const asksForHistoricalData =
+    /lịch sử\s+(?:giá|doanh thu|lợi nhuận|cổ tức|vốn hóa)|xu hướng\s+(?:giá|doanh thu|lợi nhuận)|theo ngày|theo tuần|theo tháng|so với năm ngoái|\b\d+\s*(?:ngày|tuần|tháng|năm)/i
+      .test(normalized);
   const asksForMetric =
     /giá|thị giá|p\s*\/\s*e|p\s*\/\s*b|doanh thu|lợi nhuận|cổ tức|vốn hóa|roe|roa|eps|báo cáo tài chính|lưu chuyển tiền|khối lượng|volume|cpi|gdp|tỷ giá|lãi suất|vn.?index|vàng|bitcoin|thị trường chứng khoán/i
       .test(normalized);
@@ -59,12 +76,17 @@ function requiresMarketData(question: string): boolean {
       .test(normalized);
 
   return (hasTicker && (asksForMetric || asksForCurrentQuote)) ||
-    (asksForMetric && asksForPeriod);
+    (asksForMetric && asksForPeriod) ||
+    asksForVisualization ||
+    asksForHistoricalData;
 }
 
 function isQuoteOnlyQuestion(question: string): boolean {
-  return /giá|thị giá|đóng cửa|tăng|giảm|biến động|khối lượng|volume|cao nhất|thấp nhất/i
-    .test(question.normalize("NFC")) &&
+  const normalized = question.normalize("NFC");
+  return /giá|thị giá|đóng cửa|tăng|giảm|biến động|khối lượng|volume|cao nhất|thấp nhất|biểu đồ|đồ thị|chart|diễn biến giá/i
+    .test(normalized) &&
+    !/lịch sử|xu hướng|theo ngày|theo tuần|theo tháng|so với năm ngoái|quý\s*[1-4]|năm\s*20\d{2}|\b\d+\s*(?:ngày|tuần|tháng|năm)/i
+      .test(normalized) &&
     !/p\s*\/\s*e|p\s*\/\s*b|doanh thu|lợi nhuận|cổ tức|vốn hóa|roe|roa|eps|báo cáo tài chính|lưu chuyển tiền/i
       .test(question.normalize("NFC"));
 }
@@ -255,6 +277,78 @@ async function callGroq(question: string, apiKey: string, marketContext?: string
     : null;
 }
 
+async function callCloudflareAI(question: string, marketContext?: string) {
+  const endpoint = Deno.env.get("CF_AI_PROXY_URL");
+  const secret = Deno.env.get("CF_AI_PROXY_SECRET");
+  if (!endpoint || !secret) {
+    console.error("Cloudflare Workers AI proxy configuration is missing.");
+    return null;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    console.error("Cloudflare Workers AI proxy URL is invalid.");
+    return null;
+  }
+  if (url.protocol !== "https:" || url.pathname !== "/internal/ai") {
+    console.error("Cloudflare Workers AI proxy URL must be HTTPS and end at /internal/ai.");
+    return null;
+  }
+
+  const body = JSON.stringify({
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: marketContext ? `${question}\n\n${marketContext}` : question,
+      },
+    ],
+  });
+  const timestamp = Date.now().toString();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(
+    await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(`${timestamp}.${body}`),
+    ),
+  );
+  const signatureHex = Array.from(signature, (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Findata-Timestamp": timestamp,
+      "X-Findata-Signature": signatureHex,
+    },
+    body,
+    signal: AbortSignal.timeout(35_000),
+  });
+
+  if (!response.ok) {
+    console.error(`Cloudflare Workers AI request failed with status ${response.status}`);
+    return null;
+  }
+
+  const payload = await response.json();
+  return typeof payload.answer === "string" && payload.answer.trim()
+    ? {
+      answer: payload.answer.trim(),
+      provider: "Cloudflare Workers AI · Qwen3 30B",
+    }
+    : null;
+}
+
 async function callGemini(question: string, apiKey: string, marketContext?: string) {
   const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
   const response = await fetch(
@@ -295,6 +389,17 @@ async function callGemini(question: string, apiKey: string, marketContext?: stri
 }
 
 async function generateAnswer(question: string, marketContext?: string) {
+  try {
+    const result = await callCloudflareAI(question, marketContext);
+    if (result) return result;
+  } catch (error) {
+    console.error(
+      error instanceof Error
+        ? `Cloudflare Workers AI request failed: ${error.message}`
+        : "Cloudflare Workers AI request failed",
+    );
+  }
+
   const groqKey = Deno.env.get("GROQ_API_KEY");
   if (groqKey) {
     try {
@@ -434,7 +539,7 @@ export default {
       };
       if (userId) await insertMessage("user", question, {});
 
-      let result: { answer: string; provider: string };
+      let result: { answer: string; provider: string; chart?: MarketChart };
       let intent: string;
       let citations: { title: string; url: string }[] = [];
       if (requiresMarketData(question)) {
@@ -443,13 +548,13 @@ export default {
           intent = "market_data_unavailable";
           result = {
             provider: "none",
-            answer: "Phiên bản giới thiệu hiện hỗ trợ dữ liệu giá tham khảo cho các mã trong bảng theo dõi. Vui lòng chọn một mã đang hiển thị; P/E, báo cáo tài chính và các mã khác chưa được kết nối.",
+            answer: "Findata hiện chỉ có giá tham khảo cho các mã trong bảng theo dõi, chưa có chuỗi lịch sử hay dữ liệu báo cáo tài chính. Vui lòng chọn một mã đang hiển thị để xem giá gần nhất; P/E, doanh nghiệp khác và dữ liệu vĩ mô chưa được kết nối.",
           };
         } else if (!isQuoteOnlyQuestion(question)) {
           intent = "market_data_unavailable";
           result = {
             provider: "none",
-            answer: `Hiện Findata chỉ có giá, biến động phiên và khối lượng tham khảo của ${symbol}. P/E, P/B, báo cáo doanh nghiệp và định giá chưa được kết nối nên mình không thể xác nhận số liệu đó.`,
+            answer: `Hiện Findata chỉ có giá gần nhất, biến động so với phiên trước và khối lượng tham khảo của ${symbol}; chưa có chuỗi lịch sử. P/E, P/B, báo cáo doanh nghiệp và định giá chưa được kết nối nên mình không thể xác nhận các số liệu đó.`,
           };
         } else {
           try {
@@ -476,6 +581,21 @@ export default {
               result = generated;
             }
             intent = "market_quote";
+            if (/biểu đồ|vẽ|đồ thị|chart/i.test(question)) {
+              if (quote.previousClose === null) {
+                result.answer +=
+                  "\n\nChưa thể vẽ biểu đồ so sánh vì nguồn hiện chưa cung cấp giá phiên trước.";
+              } else {
+                result.chart = {
+                  title: `${quote.symbol} · so sánh giá tham chiếu`,
+                  labels: ["Phiên trước", "Gần nhất"],
+                  values: [quote.previousClose, quote.price],
+                  unit: quote.currency,
+                  source: quote.source,
+                  asOf: quote.asOf,
+                };
+              }
+            }
           } catch (error) {
             console.error(
               error instanceof Error ? error.message : "Market quote unavailable",
@@ -503,6 +623,10 @@ export default {
         await insertMessage("assistant", result.answer, {
           intent,
           provider: result.provider,
+          ...(result.chart ? { chart: JSON.stringify(result.chart) } : {}),
+          ...(citations.length
+            ? { citations: JSON.stringify(citations) }
+            : {}),
         });
       }
 
@@ -511,6 +635,7 @@ export default {
         intent,
         provider: result.provider,
         citations,
+        chart: result.chart ?? null,
       });
     } catch (error) {
       console.error(
